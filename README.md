@@ -43,12 +43,13 @@ address, but IPs do not always uniquely identify a user.
 ## 4.0 API
 Each packet of data consists of a header and payload.
 ### 4.1 Header
-Each packet will have a header consisting of packet type and payload length
-| Message Type - 1 byte    |Payload Length - 4 bytes |
-|--------------------------|-------------------------|
-|0x01 (request to register)| 24                      |
+Header consists of:
+1. 1 byte for packet type (see table below)
+2. 4 bytes for payload length
 
-| Message Type          |     Value - 1 byte      |
+
+
+| Packet Type          |     Value - 1 byte      |
 |-----------------------|-------------------------|
 | requestRegister       |   0x00                  |
 | requestUsers          |   0x01                  |
@@ -63,7 +64,7 @@ Each packet will have a header consisting of packet type and payload length
 
 ### 4.2 Requests - sent by client
 #### 4.2.1 Register (0x00) - request to register a user
-Payload holds the username to be registered. The server will respond with a 
+Payload holds the username to be registered. Server responds with a 
 unique ID identifying the user.
 Example:
 <table><thead>
@@ -78,7 +79,7 @@ Example:
     <td>Username</td>
   </tr>
   <tr>
-    <td>0x01</td>
+    <td>0x00</td>
     <td>6</td>
     <td>Evelyn</td>
   </tr>
@@ -86,7 +87,7 @@ Example:
 </table>
 
 #### 4.2.2 Users (0x01) - request to get oneline users
-Payload holds the identifier of the user making the request. Example:
+Payload holds the user ID. Example:
 
 <table><thead>
   <tr>
@@ -100,16 +101,15 @@ Payload holds the identifier of the user making the request. Example:
     <td>User ID (4 bytes)</td>
   </tr>
   <tr>
-    <td>0x02</td>
+    <td>0x01</td>
     <td>4</td>
-    <td>1</td>
+    <td>91293</td>
   </tr>
 </tbody>
 </table>
 
 #### 4.2.3 Send (0x02) - request to send a message
-The payload holds the ID of the client and the target recepient, along with the
-message to send.
+The payload holds user ID of the sender and receiver. The message follows.
 <table><thead>
   <tr>
     <th colspan="2">Header</th>
@@ -121,20 +121,20 @@ message to send.
     <td>Length (4 bytes)</td>
     <td>Source ID (4 bytes)</td>
     <td>Target ID (4 bytes)</td>
-    <td>Message</td>
+    <td>Message (variable size)</td>
   </tr>
   <tr>
-    <td>0x03</td>
+    <td>0x02</td>
     <td>29</td>
-    <td>1</td>
-    <td>3</td>
+    <td>91293</td>
+    <td>91297</td>
     <td>Hi Jack, how are you?</td>
   </tr>
 </tbody>
 </table>
 
 #### 4.2.4 Recv (0x03) - request to receive messages
-
+Payload holds the user ID
 <table><thead>
   <tr>
     <th colspan="2">Header</th>
@@ -149,7 +149,7 @@ message to send.
   <tr>
     <td>0x03</td>
     <td>4</td>
-    <td>1</td>
+    <td>91293</td>
   </tr>
 </tbody>
 </table>
@@ -181,6 +181,10 @@ Negative response: server reponds w/ ONLY a non-zero vaule.
 
 <table><thead>
   <tr>
+    <th colspan="3">Always present</th>
+    <th colspan="1">Only present on success</th>
+  </tr>
+  <tr>
     <th colspan="2">Header</th>
     <th colspan="2">Payload</th>
   </tr></thead>
@@ -189,13 +193,13 @@ Negative response: server reponds w/ ONLY a non-zero vaule.
     <td>Type (1 byte)</td>
     <td>Length (4 bytes)</td>
     <td>Response value (1 byte)</td>
-    <td>Unique ID (4 bytes) </td>
+    <td>Unique ID (4 bytes)</td>
   </tr>
   <tr>
     <td>0xF0</td>
     <td>1 or 5</td>
     <td>0</td>
-    <td>312 (only present in successful registerations)</td>
+    <td>91293</td>
   </tr>
 </tbody>
 </table>
@@ -219,26 +223,131 @@ Negative response: server reponds w/ ONLY a non-zero vaule.
 </table>
 
 <table><thead>
+  </tr>
+    <tr>
+    <th colspan="3">Always present</th>
+    <th colspan="4">Only present on success</th>
+  </tr>
   <tr>
     <th colspan="2">Header</th>
-    <th>Payload</th>
-  </tr></thead>
+    <th colspan="2">Payload</th>
+    <th colspan="3">Repeat for n users</th>
+</thead>
+
 <tbody>
   <tr>
     <td>Type (1 byte)</td>
     <td>Length (4 bytes)</td>
-    <td>User ID (4 bytes)</td>
+    <td>Response value (1 byte)</td>
+    <td># users (4 bytes)</td>
+    <td>ith user ID (4 bytes)</td>
+    <td>len(username) (1 byte)</td>
+    <td>username</td>
   </tr>
   <tr>
-    <td>0x02</td>
-    <td>4</td>
+    <td>0xF1</td>
+    <td>>= 1</td>
+    <td>0</td>
     <td>1</td>
+    <td>91297</td>
+    <td>4</td>
+    <td>jack</td>
   </tr>
 </tbody>
 </table>
 
 #### 4.3.3 Send (0xF2) - response to sending data to a user
+<table><thead>
+  <tr>
+    <th>Response Type</th>
+    <th>Value</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>Sucess</td>
+    <td>0</td>
+  </tr>
+  <tr>
+    <td>Invalid source user ID</td>
+    <td>1</td>
+  </tr>
+  <tr>
+    <td>Invalid target user ID</td>
+    <td>2</td>
+  </tr>
+</tbody>
+</table>
+
+
+<table><thead>
+  <tr>
+    <th colspan="2">Header</th>
+    <th colspan="2">Payload</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>Type (1 byte)</td>
+    <td>Length (4 bytes)</td>
+    <td>Response value (1 byte)</td>
+  </tr>
+  <tr>
+    <td>0xF2</td>
+    <td>1</td>
+    <td>0</td>
+  </tr>
+</tbody>
+</table>
+
 #### 4.3.4 Recv (0xF3) - response to request for incoming messages
+<table><thead>
+  <tr>
+    <th>Response Type</th>
+    <th>Value</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>Sucess</td>
+    <td>0</td>
+  </tr>
+  <tr>
+    <td>Invalid User ID Provided</td>
+    <td>1</td>
+  </tr>
+</tbody>
+</table>
+
+<table><thead>
+  </tr>
+    <tr>
+    <th colspan="3">Always present</th>
+    <th colspan="4">Only present on success</th>
+  </tr>
+  <tr>
+    <th colspan="2">Header</th>
+    <th colspan="1">Payload</th>
+    <th colspan="4">Repeat for n users</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>Type (1 byte)</td>
+    <td>Length (4 bytes)</td>
+    <td>Response value (1 byte)</td>
+    <td># messages (4 bytes)</td>
+    <td>ith user ID (4 bytes)</td>
+    <td>len(message) (1 byte)</td>
+    <td>message</td>
+  </tr>
+  <tr>
+    <td>0xF3</td>
+    <td>>= 1</td>
+    <td>0</td>
+    <td>1</td>
+    <td>91297</td>
+    <td>21</td>
+    <td>I'm well Evelyn, you?</td>
+  </tr>
+</tbody>
+</table>
 
 ## Additional Features to Consider
 1. Broadcasting to multiple users in a group via multicast and UDP
