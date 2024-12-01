@@ -27,6 +27,13 @@ struct UserMetadata {
 
 class ServerState {
 public:
+    // TODO: generating a new user ID can be accomplished in other ways
+    user_id_t registerUser(const string& username) {
+        user_map_[next_id_] = {username, {}};
+        return next_id_++;
+    }
+
 private:
-    unordered_map<user_id_t, string> id_to_user_; // maps a user ID to a username
+    user_id_t next_id_{0U}; // stores the next user ID
+    unordered_map<user_id_t, UserMetadata> user_map_; // maps a user ID to user metadata
 };
