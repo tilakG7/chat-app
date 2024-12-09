@@ -27,11 +27,40 @@ struct UserMetadata {
 
 class ServerState {
 public:
+    class ConstIterator {
+    public:
+        ConstIterator(const unordered_map<user_id_t, UserMetadata>& um, bool end = false) {
+            if(end) {
+                it_ = um.cend();
+                return;
+            }
+            it_ = um.cbegin();
+        }
+
+        const pair<user_id_t, UserMetadata>& operator*() const {return *it_; }
+        
+        ConstIterator& operator++() {
+            it_++;
+            return *this;
+        }
+
+        bool operator!=(const ConstIterator& other) const {
+            return other.it_ != it_;
+        }
+
+    private:
+        unordered_map<user_id_t, UserMetadata>::const_iterator it_;
+
+    };
+
     static ServerState& getInstance() {
         static ServerState s;
         return s;
     }
-    
+
+    ConstIterator begin() const { return ConstIterator(user_map_);}
+    ConstIterator end() const { return ConstIterator(user_map_, true);}
+
     /**
      * Returns the next available user ID and assigns it the username string
      * TODO: generating a new user ID can be accomplished in other ways, such as
@@ -49,6 +78,13 @@ public:
      * certain timeout period after client has not heard from the server
      */
     void print();
+
+    /**
+     * Whether a user ID exists in storage
+     */
+    bool userExists(user_id_t id) {
+        return user_map_.contains(id);
+    }
 
 private:
     ServerState(){} // private constructor

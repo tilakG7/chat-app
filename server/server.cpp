@@ -1,5 +1,5 @@
 /**
- * Implements the Chat Communication Protocol - server side
+ * Implements the Multiple Computer Communication protocol - server side
  */
 #include "server.h"
 
@@ -7,7 +7,7 @@
 
 using namespace std;
 
-void CCPServer::parseRequestRegister(uint8_t *data, length_t payload_len) {
+void MCCServer::parseRequestRegister(uint8_t *data, length_t payload_len) {
     string username(reinterpret_cast<char *>(data), payload_len);
     user_id_t id = storage_.registerUser(username);
     
@@ -22,11 +22,16 @@ void CCPServer::parseRequestRegister(uint8_t *data, length_t payload_len) {
     // size of data = sizeof(Header) + kPayloadSize
 }
 
-void CCPServer::parseRequestUsers(uint8_t *data, length_t payload_len) {
+void MCCServer::parseRequestUsers(uint8_t *data, length_t payload_len) {
+    if(payload_len != sizeof(user_id_t)) {
+        cerr << payload_len << " - invalid payload length for requesting online"
+             << " users. Should be 4" << endl;
+    }
+    user_id_t id = *reinterpret_cast<user_id_t*>(data);
     
 }
 
-void CCPServer::parse(uint8_t *data, size_t size) {
+void MCCServer::parse(uint8_t *data, size_t size) {
     Header h = *reinterpret_cast<Header*>(data);
     assert(size >= (sizeof(Header) + kMinPayloadLen) && "Invalid packet length");
     assert(h.len == (size - sizeof(Header)) && "Invalid payload length");

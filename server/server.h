@@ -24,9 +24,9 @@ struct __attribute__((packed)) Header {
 
 constexpr size_t kMinPayloadLen = 1; // for server side
 
-class CCPServer {
+class MCCServer {
 public:
-    CCPServer(ServerState& storage) : storage_(storage){}
+    MCCServer(ServerState& storage) : storage_(storage){}
 
     /**
      * Parses the register request
@@ -34,6 +34,13 @@ public:
      * @param payload_len - length of payload
      */
     void parseRequestRegister(uint8_t *data, length_t payload_len);
+
+    /**
+     * Parses the get online users request
+     * @param data         - pointer to payload of request
+     * @param payload_len   
+     */
+    void MCCServer::parseRequestUsers(uint8_t *data, length_t payload_len);
 
     /**
      * Parses 1 request from the client and sends a response back
