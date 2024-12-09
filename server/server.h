@@ -24,8 +24,10 @@ struct __attribute__((packed)) Header {
 
 constexpr size_t kMinPayloadLen = 1; // for server side
 
-class Server {
+class CCPServer {
 public:
+    CCPServer(ServerState& storage) : storage_(storage){}
+
     /**
      * Parses the register request
      * @param data        - pointer to payload of register request
@@ -40,5 +42,6 @@ public:
      */
     void parse(uint8_t *data, size_t size);
 private:
-    ServerState& storage_; // reference to the storage instance
+    ServerState& storage_;   // reference to the storage instance
+    vector<uint8_t>& tx_buffer_; // buffer of data to transmit to client
 };
