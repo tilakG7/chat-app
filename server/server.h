@@ -1,8 +1,12 @@
+/**
+ * Implements the Multiple Computer Communication protocol - server side
+ */
+// TODO: Try using protobufs instead?
+#pragma once 
 
-// TODO: Implement better control logic
 #include <iostream>
 
-#include "server_state.h"
+#include "database.h"
 
 using namespace std;
 using length_t = uint32_t;
@@ -24,9 +28,17 @@ struct __attribute__((packed)) Header {
 
 constexpr size_t kMinPayloadLen = 1; // for server side
 
-class MCCServer {
+class MccServer {
 public:
-    MCCServer(ServerState& storage) : storage_(storage){}
+    MccServer(Database& db, vector<uint8_t> &tx_buffer) 
+        : db_(db), tx_buffer_(tx_buffer) {}
+
+    /**
+     * For now, prints the response for verification
+     * TODO: actually send the response over the network
+     * @param num_bytes - number of bytes to send 
+     */
+    void sendResp(size_t num_bytes);
 
     /**
      * Parses the register request
@@ -40,7 +52,7 @@ public:
      * @param data         - pointer to payload of request
      * @param payload_len   
      */
-    void MCCServer::parseRequestUsers(uint8_t *data, length_t payload_len);
+    void parseRequestUsers(uint8_t *data, length_t payload_len);
 
     /**
      * Parses 1 request from the client and sends a response back
@@ -48,7 +60,8 @@ public:
      * @param size - number of bytes in buffer pointed to by data
      */
     void parse(uint8_t *data, size_t size);
+
 private:
-    ServerState& storage_;   // reference to the storage instance
-    vector<uint8_t>& tx_buffer_; // buffer of data to transmit to client
+    Database& db_;   // reference to the database instance
+    vector<uint8_t>& tx_buffer_; // buffer for data to transmit to client
 };

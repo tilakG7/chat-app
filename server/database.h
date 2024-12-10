@@ -1,9 +1,12 @@
 /**
-* ServerState class acts as a database for the server-side messaging 
-* application.
+* Database is a Singleton database for the server.
 * Data here persists beyond a client/server request/response cycle.
+* 
+* TODO: handle concurrent accesses
 */
+#pragma once
 
+#include <functional>
 #include <iostream>
 #include <unordered_map>
 #include <string>
@@ -25,41 +28,35 @@ struct UserMetadata {
     vector<Msg> msg_q;
 };
 
-class ServerState {
+class Database {
 public:
+    /**
+     * Iterator class allows for iteration through the unordered_map which is 
+     * the heart of the database
+     */
     class ConstIterator {
     public:
-        ConstIterator(const unordered_map<user_id_t, UserMetadata>& um, bool end = false) {
-            if(end) {
-                it_ = um.cend();
-                return;
-            }
-            it_ = um.cbegin();
-        }
+        ConstIterator(unordered_map<user_id_t, UserMetadata>::const_iterator it) : it_(it) {}
+        const pair<const user_id_t, UserMetadata>& operator*() const {return *it_; }
 
-        const pair<user_id_t, UserMetadata>& operator*() const {return *it_; }
-        
         ConstIterator& operator++() {
             it_++;
             return *this;
         }
 
-        bool operator!=(const ConstIterator& other) const {
-            return other.it_ != it_;
-        }
+        bool operator!=(const ConstIterator& other) const { return other.it_ != it_; }
 
     private:
         unordered_map<user_id_t, UserMetadata>::const_iterator it_;
-
     };
 
-    static ServerState& getInstance() {
-        static ServerState s;
+    static Database& getInstance() {
+        static Database s;
         return s;
     }
 
-    ConstIterator begin() const { return ConstIterator(user_map_);}
-    ConstIterator end() const { return ConstIterator(user_map_, true);}
+    ConstIterator begin() const { return ConstIterator(user_map_.cbegin());}
+    ConstIterator end() const { return ConstIterator(user_map_.cend());}
 
     /**
      * Returns the next available user ID and assigns it the username string
@@ -76,20 +73,27 @@ public:
     /**
      * TODO: add function to delete a user. Perhaps this would happen after a 
      * certain timeout period after client has not heard from the server
+     * 
+     * For debugging: prints the content of the database
      */
     void print();
 
     /**
-     * Whether a user ID exists in storage
+     * Returns true a user ID exists in the database
      */
-    bool userExists(user_id_t id) {
+    bool userExists(user_id_t id) const{
         return user_map_.contains(id);
     }
 
-private:
-    ServerState(){} // private constructor
+    user_id_t getNumUsers() const {
+        return user_map_.size(); // total number of users in the database
+    }
 
-    user_id_t next_id_{0U}; // stores the next user ID
+private:
+    Database(){} // user may only access class through getInstance
+                    // private constructor supports the Singleton paradigm
+
+    user_id_t next_id_{0U}; // stores the next user ID to create in database
     // stores all user data - maps a user ID to user metadata
     unordered_map<user_id_t, UserMetadata> user_map_; 
 };
