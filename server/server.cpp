@@ -111,6 +111,43 @@ void MccServer::parseRequestUsers(uint8_t *data, length_t payload_len) {
     sendResp(resp_hdr.len + sizeof(Header));
 }
 
+void MccServer::parseRequestSend(uint8_t *data, length_t payload_len) {
+    assert(payload_len > (sizeof(user_id_t) * 2) && "Payload must hold 2 user ids and a message");
+    // payload contains the message, and source and target user IDs 
+    const size_t msg_len = payload_len - (sizeof(user_id_t) * 2); 
+
+    // get source ID
+    user_id_t source_id = *reinterpret_cast<user_id_t*>(data);
+    data += sizeof(user_id_t);
+    // get target ID
+    user_id_t target_id = *reinterpret_cast<user_id_t*>(data);
+    data += sizeof(user_id_t);
+    // get message
+    string msg(reinterpret_cast<char*>(data), msg_len);
+
+    // construct response
+    uint8_t resp_value = 0;
+    Header h{PacketType::kRespSend, sizeof(resp_value)};
+    if(!db_.userExists(source_id)) {
+        resp_value = 1;
+    } else if(!db_.userExists(target_id)) {
+        resp_value = 2;
+    } else {
+        // store message
+        db_.queueMsg(target_id, {source_id, msg});
+    }
+    
+    uint8_t *dest = &tx_buffer_[0];
+    // copy the Header
+    memcpy(dest, &h, sizeof(Header));
+    dest += sizeof(Header);
+    memcpy(dest, &resp_value, sizeof(resp_value));
+    dest += sizeof(resp_value);
+
+    sendResp(sizeof(Header) + sizeof(uint8_t));
+
+}
+
 void MccServer::parse(uint8_t *data, size_t size) {
     Header h = *reinterpret_cast<Header*>(data);
     assert(size >= (sizeof(Header) + kMinPayloadLen) && "Invalid packet length");
@@ -124,6 +161,7 @@ void MccServer::parse(uint8_t *data, size_t size) {
             parseRequestUsers(data + sizeof(Header), h.len);
         break;
         case PacketType::kRequestSend:
+            parseRequestSend(data + sizeof(Header), h.len);
         break;
         case PacketType::kRequestRecv:
         break;

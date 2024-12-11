@@ -55,6 +55,14 @@ public:
     void parseRequestUsers(uint8_t *data, length_t payload_len);
 
     /**
+     * If user A is trying to message user B, this function stores user A's 
+     * message in the database for retrieval when user B checks for new messages
+     * @param data - pointer to payload of request
+     * @param payload_len 
+     */
+    void parseRequestSend(uint8_t *data, length_t payload_len);
+
+    /**
      * Parses 1 request from the client and sends a response back
      * @param data - pointer to data buffer
      * @param size - number of bytes in buffer pointed to by data
