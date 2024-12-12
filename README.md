@@ -334,7 +334,7 @@ Negative response: server reponds w/ ONLY a non-zero vaule.
     <td>Response value (1 byte)</td>
     <td># messages (4 bytes)</td>
     <td>ith user ID (4 bytes)</td>
-    <td>len(message) (1 byte)</td>
+    <td>len(message) (4 bytes)</td>
     <td>message</td>
   </tr>
   <tr>
