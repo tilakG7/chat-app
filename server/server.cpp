@@ -125,6 +125,9 @@ void MccServer::parseRequestSend(uint8_t *data, length_t payload_len) {
     // get message
     string msg(reinterpret_cast<char*>(data), msg_len);
 
+    cout << "Received message : " << msg << endl;
+    cout << "From: " << source_id << ", for: " << target_id << endl;
+
     // construct response
     uint8_t resp_value = 0;
     Header h{PacketType::kRespSend, sizeof(resp_value)};
@@ -222,9 +225,18 @@ void handleRespUsers(uint8_t *payload, length_t len) {
 void handleRespSend(uint8_t *payload, length_t len) {
     cout << "Received kRespSend" << endl;
     cout << "Payload length: " << len << endl;
-    for(length_t i=0; i < len; i++) {
-        cout << static_cast<int>(*payload) << endl;
+    uint8_t resp_val = *payload;
+    assert(len == sizeof(resp_val) && 
+            "Payload should only contain the response value");
+    
+    if(resp_val == 1) {
+        cerr << "Invalid source ID provided" << endl;
+    } else if(resp_val == 2) {
+        cerr << "Invalid target ID provided" << endl;
+    } else {
+        cout << "Message sent successfully." << endl;
     }
+
 }
 
 void handleRespRecv(uint8_t *payload, length_t len) {
@@ -279,4 +291,8 @@ int main() {
 
     vector<uint8_t> req_users{0x01, 4, 0, 0, 0, 2, 0, 0, 0};
     server.parse(&req_users[0], req_users.size());
+
+    vector<uint8_t> req_send{0x02, 10, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 'h', 'i'};
+    server.parse(&req_send[0], req_send.size());
+
 }

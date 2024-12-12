@@ -12,7 +12,7 @@ user_id_t Database::registerUser(const string& username) {
     return next_id_++;
 }
 
-bool Database::queueMsg(user_id_t recepient_id, Msg &m) {
+bool Database::queueMsg(user_id_t recepient_id, const Msg &m) {
     // user intended to be the recepient of the message must exist
     if(user_map_.find(recepient_id) == user_map_.end()) {
         return false;

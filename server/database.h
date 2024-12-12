@@ -68,7 +68,7 @@ public:
     /**
      * Stores the message for the intended recepient for later access
      */
-    bool queueMsg(user_id_t recepient_id, Msg &m);
+    bool queueMsg(user_id_t recepient_id, const Msg &m);
 
     /**
      * TODO: add function to delete a user. Perhaps this would happen after a 
