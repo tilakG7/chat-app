@@ -324,8 +324,8 @@ Negative response: server reponds w/ ONLY a non-zero vaule.
   </tr>
   <tr>
     <th colspan="2">Header</th>
-    <th colspan="1">Payload</th>
-    <th colspan="4">Repeat for n users</th>
+    <th colspan="2">Payload</th>
+    <th colspan="3">Repeat for all messages</th>
   </tr></thead>
 <tbody>
   <tr>
@@ -334,7 +334,7 @@ Negative response: server reponds w/ ONLY a non-zero vaule.
     <td>Response value (1 byte)</td>
     <td># messages (4 bytes)</td>
     <td>ith user ID (4 bytes)</td>
-    <td>len(message) (1 byte)</td>
+    <td>len(message) (4 bytes)</td>
     <td>message</td>
   </tr>
   <tr>
