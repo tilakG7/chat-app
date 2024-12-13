@@ -89,6 +89,17 @@ public:
         return user_map_.size(); // total number of users in the database
     }
 
+    UserMetadata& operator[](user_id_t id) {
+        return user_map_[id];
+    }
+
+    /**
+     * Given a user ID, returns the corresponding username
+     */
+    string getUsername(user_id_t id) {
+        return user_map_.contains(id) ? user_map_[id].username : "";
+    }
+
 private:
     Database(){} // user may only access class through getInstance
                     // private constructor supports the Singleton paradigm

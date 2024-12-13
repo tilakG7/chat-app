@@ -63,6 +63,13 @@ public:
     void parseRequestSend(uint8_t *data, length_t payload_len);
 
     /**
+     * Parses a request from the user to get all relevant messages
+     * @param data - pointer to payload of the request
+     * @param payload_len
+     */
+    void parseRequestRecv(uint8_t *data, length_t payload_len);
+
+    /**
      * Parses 1 request from the client and sends a response back
      * @param data - pointer to data buffer
      * @param size - number of bytes in buffer pointed to by data

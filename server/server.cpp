@@ -151,6 +151,68 @@ void MccServer::parseRequestSend(uint8_t *data, length_t payload_len) {
 
 }
 
+void MccServer::parseRequestRecv(uint8_t *data, length_t payload_len) {
+    assert(payload_len == sizeof(user_id_t) && 
+            "Request to receive messages has incorrect payload length");
+
+    user_id_t id = *reinterpret_cast<user_id_t*>(data);
+
+    // construct response
+    Header resp_hdr;
+    resp_hdr.type = PacketType::kRespRecv;
+    uint8_t *dest = &tx_buffer_[0];
+    
+    // Return a negative response if user ID not in server storage
+    if(!db_.userExists(id)) {
+        uint8_t resp_value = 1; // error, user ID not in database
+        resp_hdr.len = sizeof(resp_value);
+        memcpy(dest, &resp_hdr, sizeof(resp_hdr));
+        dest += sizeof(resp_hdr);
+        *dest = resp_value;
+        dest++;
+        sendResp(sizeof(Header) + resp_hdr.len);
+        return;
+    }
+
+    length_t resp_pl = 0;
+    dest += sizeof(Header);
+    resp_pl += sizeof(Header);
+
+    // copy the response value
+    uint8_t resp_value = 0; // success, user ID found in database
+    memcpy(dest, &resp_value, sizeof(resp_value));
+    dest += sizeof(resp_value);
+    resp_pl += sizeof(resp_value);
+    // copy the number of messages
+    uint32_t num_messages = db_[id].msg_q.size();
+    memcpy(dest, &num_messages, sizeof(num_messages));
+    dest += sizeof(num_messages);
+    resp_pl += sizeof(num_messages);
+
+    for(Msg &m : db_[id].msg_q) {
+        // copy the sender ID
+        memcpy(dest, &m.sender_id, sizeof(m.sender_id));
+        dest += sizeof(m.sender_id);
+        resp_pl += sizeof(m.sender_id);
+        // copy the length of message
+        uint32_t msg_len = m.msg.size();
+        memcpy(dest, &msg_len, sizeof(msg_len));
+        dest += sizeof(msg_len);
+        resp_pl += sizeof(msg_len);
+        // copy the message
+        memcpy(dest, m.msg.data(), msg_len);
+        dest += msg_len;
+        resp_pl += msg_len;
+    }
+
+    // populate the header
+    resp_hdr.len = resp_pl;
+    memcpy(&tx_buffer_[0], &resp_hdr, sizeof(resp_hdr));
+
+
+    sendResp(sizeof(Header) + resp_pl);
+}
+
 void MccServer::parse(uint8_t *data, size_t size) {
     Header h = *reinterpret_cast<Header*>(data);
     assert(size >= (sizeof(Header) + kMinPayloadLen) && "Invalid packet length");
@@ -167,6 +229,7 @@ void MccServer::parse(uint8_t *data, size_t size) {
             parseRequestSend(data + sizeof(Header), h.len);
         break;
         case PacketType::kRequestRecv:
+            parseRequestRecv(data + sizeof(Header), h.len);
         break;
         case PacketType::kRespRegister: // intentional fall-through
         case PacketType::kRespUsers:    // intentional fall-through
@@ -240,10 +303,34 @@ void handleRespSend(uint8_t *payload, length_t len) {
 }
 
 void handleRespRecv(uint8_t *payload, length_t len) {
+
     cout << "Received kRespRecv" << endl;
     cout << "Payload length: " << len << endl;
     for(length_t i=0; i < len; i++) {
-        cout << static_cast<int>(*payload) << endl;
+        cout <<  std::hex       // Switch to hexadecimal format
+             << std::setw(2)    // Minimum width of 2 characters
+             << std::setfill('0') // Fill with '0' if width is less
+             << static_cast<int>(*(payload + i)) // Cast to int to avoid interpreting as char
+             << std::endl;
+    }
+    uint8_t resp_val = *payload;
+    if(resp_val > 0) {
+        cout << "Error receiving response recevie." << endl;
+    }
+    payload += sizeof(resp_val);
+    uint32_t num_messages = *reinterpret_cast<uint32_t*>(payload);
+    payload += sizeof(num_messages);
+
+    for(length_t i=0; i < num_messages; i++) {
+        user_id_t id = *reinterpret_cast<user_id_t*>(payload);
+        payload += sizeof(user_id_t);
+        length_t msg_len = *reinterpret_cast<length_t*>(payload);
+        payload += sizeof(length_t);
+        string msg(reinterpret_cast<char*>(payload), msg_len);
+        payload += msg_len;
+
+        cout << "Received message: " << msg << endl;
+        cout << "From user: " << Database::getInstance().getUsername(id) << endl;
     }
 }
 
@@ -294,5 +381,14 @@ int main() {
 
     vector<uint8_t> req_send{0x02, 10, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 'h', 'i'};
     server.parse(&req_send[0], req_send.size());
+
+    vector<uint8_t> req_send2{0x02, 11, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 'b', 'y', 'e'};
+    server.parse(&req_send2[0], req_send2.size());
+
+    vector<uint8_t> req_recv{0x03, 4, 0, 0, 0, 1, 0, 0, 0};
+    server.parse(&req_recv[0], req_recv.size());
+
+    vector<uint8_t> req_recv2{0x03, 4, 0, 0, 0, 2, 0, 0, 0};
+    server.parse(&req_recv2[0], req_recv2.size());
 
 }
