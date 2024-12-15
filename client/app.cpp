@@ -1,30 +1,79 @@
+#include "app.h"
 #include "console/console.h"
+#include "common/common.h"
 #include <iostream>
 
 class App {
 public:
     App() : console_(Console::getInstance()) {}
 
-    // this function is called when user starts chatting
-    void chatting() {
-        
-    }
-    void run() {
+    void registerUser() {
         // get username
-        string username = console_.read("Hi, there. Enter your name to start chatting >");
+        username_ = console_.read("Hi, there. Enter your name to start chatting >");
         // TODO: send request to register user
+    }
 
-        console_.write("Hi " + username + "! Follow the instructions below:");
+    Command getUserCommand() {
+        console_.write("Hi " + username_ + "! Follow the instructions below:");
         console_.write("Type \"1\" for viewing online users");
-        console_.write("Type \"2\" followed by a username to chat with that user");
-        string user_cmd = console_.read("Enter your choice >");
-        // parse user_cmd
-        // if 1, then issue a request online users request
-        // if 2, then ensure the username they typed in is correct
+        console_.write("Type \"2\" to chat with a user");
 
+        static unordered_map<char, Command> cmd_map{
+            {'1', Command::kGetOnlineUsers},
+            {'2', Command::kChatWithUser}
+        };
+
+        while(true) {
+            string user_cmd = console_.read("Enter your choice >");
+
+            if(user_cmd.size() == 0 || user_cmd.size() > 1 || !cmd_map.contains(user_cmd[0])) {
+                console_.write("Invalid selection, try again");
+            } else {
+                return cmd_map[user_cmd[0]];
+            }
+        }
+    }
+
+    void displayOnlineUsers() {
+        // make a request and get a response
+        // display online users on the screen
+    }
+
+    void chatWithUser() {
+        while(true) {
+            string target_user = console_.read("Enter the name of the user you would like to chat with: ");
+            // if(target_user does not exist)
+            //  console_.write("User does not exist");
+            //  continue
+            //
+            //  while(true) {
+            //      
+            //  } 
+
+        }
+
+    }
+
+    void run() {
+        registerUser();
+        
+        while(true) {
+            switch(getUserCommand()) {
+                case Command::kDisplayOnlineUsers:
+                    cout << "You selected kGetOnlineUsers" << endl;
+                break;
+                case Command::kChatWithUser:
+                    cout << "You selected kChatWithUser" << endl;
+                break;
+                default:
+                break;
+            }
+        }
     }
 private:
     Console &console_;
+    unordered_map<user_id_t, string> id_to_name_; // maps user ID to name
+    string username_; // name of user
 
 };
 
