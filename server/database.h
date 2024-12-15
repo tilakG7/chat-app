@@ -6,13 +6,14 @@
 */
 #pragma once
 
+#include "common/common.h"
+
 #include <functional>
 #include <iostream>
 #include <unordered_map>
 #include <string>
 #include <vector>
 
-using user_id_t = uint32_t; // type to hold user IDs
 using namespace std;
 
 

@@ -8,18 +8,9 @@
 
 #include "database.h"
 
+#include "../common/common.h"
+
 using namespace std;
-using length_t = uint32_t;
-enum class PacketType : uint8_t {
-    kRequestRegister = 0,
-    kRequestUsers = 1,
-    kRequestSend = 2,
-    kRequestRecv = 3,
-    kRespRegister = 0xF0,
-    kRespUsers = 0xF1,
-    kRespSend = 0xF2,
-    kRespRecv = 0xF3
-};
 
 struct __attribute__((packed)) Header {
     PacketType type;
