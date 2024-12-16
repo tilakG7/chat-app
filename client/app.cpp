@@ -39,19 +39,26 @@ public:
         // display online users on the screen
     }
 
-    void chatWithUser() {
-        while(true) {
-            string target_user = console_.read("Enter the name of the user you would like to chat with: ");
-            // if(target_user does not exist)
-            //  console_.write("User does not exist");
-            //  continue
-            //
-            //  while(true) {
-            //      
-            //  } 
 
+
+    void chatWithUser() {
+        string target_user = "";
+        while(target_user == "") {
+            target_user = console_.read("Enter the name of the user you would like to chat with: ");
+            if(!name_to_id.contains(target_user)) {
+                console_.write("Error,  user not available");
+                target_user = "";
+            }
         }
 
+
+        while(true) {
+            string msg = console_.read("Enter message to send to " + target_user + "or X to exit> ");
+            if(msg[0] == 'X') {
+                return;
+            }
+            // TODO: send msg
+        }
     }
 
     void run() {
@@ -72,7 +79,7 @@ public:
     }
 private:
     Console &console_;
-    unordered_map<user_id_t, string> id_to_name_; // maps user ID to name
+    unordered_map<string, user_id_t> name_to_id; // maps username to id
     string username_; // name of user
 
 };
