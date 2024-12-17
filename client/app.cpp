@@ -19,7 +19,7 @@ public:
         console_.write("Type \"2\" to chat with a user");
 
         static unordered_map<char, Command> cmd_map{
-            {'1', Command::kGetOnlineUsers},
+            {'1', Command::kDisplayOnlineUsers},
             {'2', Command::kChatWithUser}
         };
 
