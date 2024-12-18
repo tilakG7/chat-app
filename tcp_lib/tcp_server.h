@@ -74,6 +74,46 @@ public:
         return res;
     }
 
+
+    /**
+     * Sends data in a non-blocking manner
+     * @param pData - pointer to data to send
+     * @param size  - number of bytes to send
+     * @returns number of bytes sent, or -1 for error
+     */
+    static int sendNb(uint8_t *pData, size_t size) {
+        return Socket::sendNb(fd_, pData, size);
+    }
+
+    /** 
+     * Blocks until all data has been set
+     * 
+     * @param pData - pointer to data to send
+     * @param count - number of bytes to send
+    */
+    static bool sendB(uint8_t *pData, size_t count) {
+        return Socket::sendB(fd_, pData, size);
+    }
+
+    /**
+    * Returns the number of bytes read from connection
+    * @param data - pointer to buffer where data is to be stored
+    * @param size - max num bytes which can be copied into buffer
+    */
+    static int receiveNb(uint8_t *pData, size_t size) {
+        return Socket::receiveNb(fd_, pData, size);
+    }
+
+    /**
+     * Block until all data has ben received
+     * @param pData - pointer memory where data will be stored
+     * @param size - number of bytes to receive
+     */
+    static bool receiveB(uint8_t *pData, size_t count) {
+        return Socket::receiveB(fd_, pData, count);
+    }
+
+
     ~ServerSockSet() {
         ::close(m_listening_fd);
     }
