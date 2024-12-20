@@ -8,14 +8,9 @@
 
 #include "database.h"
 
-#include "../common/common.h"
+#include "common/common.h"
 
 using namespace std;
-
-struct __attribute__((packed)) Header {
-    PacketType type;
-    length_t len;
-};
 
 constexpr size_t kMinPayloadLen = 1; // for server side
 

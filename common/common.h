@@ -13,3 +13,12 @@ enum class PacketType : uint8_t {
     kRespSend = 0xF2,
     kRespRecv = 0xF3
 };
+
+struct __attribute__((packed)) Header {
+    PacketType type;
+    length_t len;
+};
+
+constexpr length_t kReqUsersPayloadLen = sizeof(user_id_t);
+constexpr length_t kReqSendMinPayloadLen = 8;
+constexpr length_t kReqRecvPayloadLen = sizeof(user_id_t);
