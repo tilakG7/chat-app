@@ -7,7 +7,7 @@
 
 using namespace std;
 
-void MccServer::parseRequestRegister(uint8_t *data, length_t payload_len) {
+size_t MccServer::parseRequestRegister(uint8_t *data, length_t payload_len) {
     // read username from request and register user
     string username(reinterpret_cast<char *>(data), payload_len);
     user_id_t id = db_.registerUser(username); // unique ID assigned to user
@@ -27,11 +27,11 @@ void MccServer::parseRequestRegister(uint8_t *data, length_t payload_len) {
     // copy user ID
     memcpy(dest, &id, sizeof(user_id_t));
     dest += sizeof(user_id_t);
-    
-    sendResp(sizeof(Header) + payload_size);
+
+    return sizeof(Header) + payload_size;
 }
 
-void MccServer::parseRequestUsers(uint8_t *data, length_t payload_len) {
+size_t MccServer::parseRequestUsers(uint8_t *data, length_t payload_len) {
     assert(payload_len == sizeof(user_id_t) && "Users request should have a size of 4");
 
     user_id_t id = *reinterpret_cast<user_id_t*>(data);
@@ -50,7 +50,7 @@ void MccServer::parseRequestUsers(uint8_t *data, length_t payload_len) {
         *dest = resp_value;
         dest++;
         sendResp(sizeof(Header) + resp_hdr.len);
-        return;
+        return 0;
     }
 
     uint8_t resp_value = 0;
@@ -69,8 +69,7 @@ void MccServer::parseRequestUsers(uint8_t *data, length_t payload_len) {
         *reinterpret_cast<user_id_t*>(dest) = num_users;
         dest += sizeof(user_id_t);
 
-        sendResp(sizeof(Header) + resp_hdr.len);
-        return;
+        return sizeof(Header) + resp_hdr.len;
     }
 
     length_t curr_payload_len = sizeof(Header);
@@ -107,11 +106,10 @@ void MccServer::parseRequestUsers(uint8_t *data, length_t payload_len) {
     // set header
     memcpy(&tx_buffer_[0], &resp_hdr, sizeof(Header));
 
-    // send the reponse
-    sendResp(resp_hdr.len + sizeof(Header));
+    return sizeof(Header) + resp_hdr.len;
 }
 
-void MccServer::parseRequestSend(uint8_t *data, length_t payload_len) {
+size_t MccServer::parseRequestSend(uint8_t *data, length_t payload_len) {
     assert(payload_len > (sizeof(user_id_t) * 2) && "Payload must hold 2 user ids and a message");
     // payload contains the message, and source and target user IDs 
     const size_t msg_len = payload_len - (sizeof(user_id_t) * 2); 
@@ -147,11 +145,10 @@ void MccServer::parseRequestSend(uint8_t *data, length_t payload_len) {
     memcpy(dest, &resp_value, sizeof(resp_value));
     dest += sizeof(resp_value);
 
-    sendResp(sizeof(Header) + sizeof(uint8_t));
-
+    return sizeof(Header) + sizeof(uint8_t);
 }
 
-void MccServer::parseRequestRecv(uint8_t *data, length_t payload_len) {
+size_t MccServer::parseRequestRecv(uint8_t *data, length_t payload_len) {
     assert(payload_len == sizeof(user_id_t) && 
             "Request to receive messages has incorrect payload length");
 
@@ -170,8 +167,7 @@ void MccServer::parseRequestRecv(uint8_t *data, length_t payload_len) {
         dest += sizeof(resp_hdr);
         *dest = resp_value;
         dest++;
-        sendResp(sizeof(Header) + resp_hdr.len);
-        return;
+        return sizeof(Header) + resp_hdr.len;
     }
 
     length_t resp_pl = 0;
@@ -209,27 +205,26 @@ void MccServer::parseRequestRecv(uint8_t *data, length_t payload_len) {
     resp_hdr.len = resp_pl;
     memcpy(&tx_buffer_[0], &resp_hdr, sizeof(resp_hdr));
 
-
-    sendResp(sizeof(Header) + resp_pl);
+    return sizeof(Header) + resp_pl;
 }
 
-void MccServer::parse(uint8_t *data, size_t size) {
+size_t MccServer::parse(uint8_t *data, size_t size) {
     Header h = *reinterpret_cast<Header*>(data);
     assert(size >= (sizeof(Header) + kMinPayloadLen) && "Invalid packet length");
     assert(h.len == (size - sizeof(Header)) && "Invalid payload length");
 
     switch(h.type) {
         case PacketType::kRequestRegister:
-            parseRequestRegister(data + sizeof(Header), h.len);
+            return parseRequestRegister(data + sizeof(Header), h.len);
         break;
         case PacketType::kRequestUsers:
-            parseRequestUsers(data + sizeof(Header), h.len);
+            return parseRequestUsers(data + sizeof(Header), h.len);
         break;
         case PacketType::kRequestSend:
-            parseRequestSend(data + sizeof(Header), h.len);
+            return parseRequestSend(data + sizeof(Header), h.len);
         break;
         case PacketType::kRequestRecv:
-            parseRequestRecv(data + sizeof(Header), h.len);
+            return parseRequestRecv(data + sizeof(Header), h.len);
         break;
         case PacketType::kRespRegister: // intentional fall-through
         case PacketType::kRespUsers:    // intentional fall-through
@@ -240,6 +235,7 @@ void MccServer::parse(uint8_t *data, size_t size) {
             cerr << "ERR: Server received unknown packet type "<< endl;
 
     }
+    return 0;
 }
 
 void handleRespRegister(uint8_t *payload, length_t len) {
@@ -363,32 +359,32 @@ void MccServer::sendResp(size_t num_bytes) {
 
 }
 
-int main() {
-    vector<uint8_t> tx_buffer(100, 0);
-    MccServer server(Database::getInstance(), tx_buffer);
+// int main() {
+//     vector<uint8_t> tx_buffer(100, 0);
+//     MccServer server(Database::getInstance(), tx_buffer);
 
-    vector<uint8_t> req_register{0x00, 6, 0, 0, 0, 'e', 'v', 'e', 'l', 'y', 'n'}; 
-    server.parse(&req_register[0], req_register.size());
+//     vector<uint8_t> req_register{0x00, 6, 0, 0, 0, 'e', 'v', 'e', 'l', 'y', 'n'}; 
+//     server.parse(&req_register[0], req_register.size());
 
-    vector<uint8_t> req_register2{0x00, 6, 0, 0, 0, 'e', 'v', 'e', 'r', 'e', 't'}; 
-    server.parse(&req_register2[0], req_register2.size());\
+//     vector<uint8_t> req_register2{0x00, 6, 0, 0, 0, 'e', 'v', 'e', 'r', 'e', 't'}; 
+//     server.parse(&req_register2[0], req_register2.size());\
 
-    vector<uint8_t> req_register3{0x00, 4, 0, 0, 0, 'j', 'a', 'c', 'k'}; 
-    server.parse(&req_register3[0], req_register3.size());
+//     vector<uint8_t> req_register3{0x00, 4, 0, 0, 0, 'j', 'a', 'c', 'k'}; 
+//     server.parse(&req_register3[0], req_register3.size());
 
-    vector<uint8_t> req_users{0x01, 4, 0, 0, 0, 2, 0, 0, 0};
-    server.parse(&req_users[0], req_users.size());
+//     vector<uint8_t> req_users{0x01, 4, 0, 0, 0, 2, 0, 0, 0};
+//     server.parse(&req_users[0], req_users.size());
 
-    vector<uint8_t> req_send{0x02, 10, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 'h', 'i'};
-    server.parse(&req_send[0], req_send.size());
+//     vector<uint8_t> req_send{0x02, 10, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 'h', 'i'};
+//     server.parse(&req_send[0], req_send.size());
 
-    vector<uint8_t> req_send2{0x02, 11, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 'b', 'y', 'e'};
-    server.parse(&req_send2[0], req_send2.size());
+//     vector<uint8_t> req_send2{0x02, 11, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 'b', 'y', 'e'};
+//     server.parse(&req_send2[0], req_send2.size());
 
-    vector<uint8_t> req_recv{0x03, 4, 0, 0, 0, 1, 0, 0, 0};
-    server.parse(&req_recv[0], req_recv.size());
+//     vector<uint8_t> req_recv{0x03, 4, 0, 0, 0, 1, 0, 0, 0};
+//     server.parse(&req_recv[0], req_recv.size());
 
-    vector<uint8_t> req_recv2{0x03, 4, 0, 0, 0, 2, 0, 0, 0};
-    server.parse(&req_recv2[0], req_recv2.size());
+//     vector<uint8_t> req_recv2{0x03, 4, 0, 0, 0, 2, 0, 0, 0};
+//     server.parse(&req_recv2[0], req_recv2.size());
 
-}
+// }

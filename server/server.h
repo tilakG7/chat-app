@@ -35,37 +35,42 @@ public:
      * Parses the register request
      * @param data        - pointer to payload of register request
      * @param payload_len - length of payload
+     * @return size of response in number of bytes (stored in tx_buffer_)
      */
-    void parseRequestRegister(uint8_t *data, length_t payload_len);
+    size_t parseRequestRegister(uint8_t *data, length_t payload_len);
 
     /**
      * Parses the get online users request
      * @param data         - pointer to payload of request
      * @param payload_len   
+     * @return size of response in number of bytes (stored in tx_buffer_)
      */
-    void parseRequestUsers(uint8_t *data, length_t payload_len);
+    size_t parseRequestUsers(uint8_t *data, length_t payload_len);
 
     /**
      * If user A is trying to message user B, this function stores user A's 
      * message in the database for retrieval when user B checks for new messages
      * @param data - pointer to payload of request
      * @param payload_len 
+     * @return size of response in number of bytes (stored in tx_buffer_)
      */
-    void parseRequestSend(uint8_t *data, length_t payload_len);
+    size_t parseRequestSend(uint8_t *data, length_t payload_len);
 
     /**
      * Parses a request from the user to get all relevant messages
      * @param data - pointer to payload of the request
      * @param payload_len
+     * @return size of response in number of bytes (stored in tx_buffer_)
      */
-    void parseRequestRecv(uint8_t *data, length_t payload_len);
+    size_t parseRequestRecv(uint8_t *data, length_t payload_len);
 
     /**
      * Parses 1 request from the client and sends a response back
      * @param data - pointer to data buffer
      * @param size - number of bytes in buffer pointed to by data
+     * @returns size of the response in number of bytes (stored in tx_buffer_)
      */
-    void parse(uint8_t *data, size_t size);
+    size_t parse(uint8_t *data, size_t size);
 
 private:
     Database& db_;   // reference to the database instance
