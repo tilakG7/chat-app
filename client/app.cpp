@@ -87,8 +87,4 @@ private:
 int main() {
     App app;
     app.run();
-    // enter your name, register name with server
-    // show current online users
-    // periodically check for new messages
-    // ask user who they want to chat with
 }
