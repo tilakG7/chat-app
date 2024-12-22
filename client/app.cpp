@@ -1,11 +1,14 @@
 #include "app.h"
+#include "client.h"
 #include "console/console.h"
 #include "common/common.h"
 #include <iostream>
 
 class App {
 public:
-    App() : console_(Console::getInstance()) {}
+    App() : console_(Console::getInstance()) {
+        my_client = MccClient()
+    }
 
     void registerUser() {
         // get username
@@ -35,8 +38,7 @@ public:
     }
 
     void displayOnlineUsers() {
-        // make a request and get a response
-        // display online users on the screen
+
     }
 
 
@@ -81,6 +83,9 @@ private:
     Console &console_;
     unordered_map<string, user_id_t> name_to_id; // maps username to id
     string username_; // name of user
+    vector<uint8_t> tx_buffer_(1000U);
+    vector<uint8_t> rx_buffer_(1000U);
+    MccClient my_client(tx_buffer_);
 
 };
 
