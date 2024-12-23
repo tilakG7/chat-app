@@ -7,13 +7,16 @@
 class App {
 public:
     App() : console_(Console::getInstance()) {
-        my_client = MccClient()
     }
 
     void registerUser() {
         // get username
         username_ = console_.read("Hi, there. Enter your name to start chatting >");
         // TODO: send request to register user
+        my_client_.encodeRequestRegister(username_);
+        // actually send it
+        // get response
+        // handle response
     }
 
     Command getUserCommand() {
@@ -85,7 +88,7 @@ private:
     string username_; // name of user
     vector<uint8_t> tx_buffer_(1000U);
     vector<uint8_t> rx_buffer_(1000U);
-    MccClient my_client(tx_buffer_);
+    MccClient my_client_(tx_buffer_);
 
 };
 
