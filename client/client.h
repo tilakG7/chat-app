@@ -52,6 +52,14 @@ public:
      */
     bool handleRespRegister(user_id_t &id);
 
+    /**
+     * Handles the response to the online users request
+     * @param[out] name_to_id - updated to hold a valid mapping of names to user 
+     *  IDs if function returns true
+     * @returns true if the request was handled successfully
+     */
+    bool handleRespUsers(unordered_map<string, user_id_t>& name_to_id);
+
 private:
     /**
      * Ensures that the packet received from the server matches the expected 

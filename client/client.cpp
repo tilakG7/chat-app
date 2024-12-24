@@ -96,35 +96,41 @@ bool MccClient::handleRespRegister(user_id_t &id) {
 }
 
 
-// void handleRespUsers(uint8_t *payload, length_t len) {
-//     cout << "Received kRespUsers" << endl;
-//     cout << "Payload length: " << len << endl;
-//     uint8_t resp_value = *payload;
-//     payload++;
+bool MccClient::handleRespUsers(unordered_map<string, user_id_t>& name_to_id) {
+    if(!validateRespHeader(PacketType::kRespUsers)) { 
+        cerr << "ERR: Unexpected response type, expected kRespUsers" << endl;
+        return false; 
+    }
 
-//     if(resp_value != 0) {
-//         cerr << "ERR: Users response failed" << endl;
-//         return;
-//     }
-//     // get the number of users
-//     user_id_t num_users = *reinterpret_cast<user_id_t*>(payload);
-//     payload += sizeof(user_id_t);
+    uint8_t *payload = &rx_buffer_[sizeof(Header)];
+    uint8_t resp_value = *payload;
+    payload++;
 
-//     for(user_id_t i=0; i < num_users; i++) {
-//         // get user ID
-//         const user_id_t curr_user_id = *reinterpret_cast<user_id_t*>(payload);
-//         payload += sizeof(user_id_t);
-//         // get username size
-//         const uint32_t username_size = *reinterpret_cast<uint32_t*>(payload);
-//         payload += sizeof(uint32_t);
-//         // get username
-//         string username(reinterpret_cast<char*>(payload), username_size);
-//         payload += username_size;
+    if(resp_value != 0) {
+        cerr << "ERR: Users response failed" << endl;
+        return false;
+    }
+    
+    // get the number of users
+    user_id_t num_users = *reinterpret_cast<user_id_t*>(payload);
+    payload += sizeof(user_id_t);
 
-//         cout << "user ID : " << curr_user_id << endl;
-//         cout << "username: " << username << endl;
-//     }
-// }
+    name_to_id.clear(); // clear existing cache
+    for(user_id_t i=0; i < num_users; i++) {
+        // get user ID
+        const user_id_t curr_user_id = *reinterpret_cast<user_id_t*>(payload);
+        payload += sizeof(user_id_t);
+        // get username size
+        const uint32_t username_size = *reinterpret_cast<uint32_t*>(payload);
+        payload += sizeof(uint32_t);
+        // get username
+        string username(reinterpret_cast<char*>(payload), username_size);
+        payload += username_size;
+
+        name_to_id[username] = curr_user_id;
+    }
+    return true;
+}
 
 // void handleRespSend(uint8_t *payload, length_t len) {
 //     cout << "Received kRespSend" << endl;

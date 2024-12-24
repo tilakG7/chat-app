@@ -13,25 +13,30 @@ public:
     App() : console_(Console::getInstance()) {
     }
 
-    static void registerUser(App *my_app) {
+    /**
+     * Registers user with server and stores the user ID assigned by server 
+     * response
+     */
+    void taskRegisterUser() {
         Socket my_socket;
-        my_socket.connectB("127.0.0.1", 8080);
+        my_socket.connectB(kServerIp, kServerPort); // connect to server
 
-        // get username
-        my_app->username_ = my_app->console_.read("Hi, there. Enter your name to start chatting >");
+        // get username from user
+        username_ = console_.read("Hi, there. Enter your name to start chatting >");
         // send request to register user
-        size_t num_bytes_to_send = my_app->my_client_.encodeRequestRegister(my_app->username_);
-        uint8_t *p_tx_buffer_start = &my_app->tx_buffer_[0];
-        uint8_t *p_rx_buffer_start = &my_app->rx_buffer_[0];
+        size_t num_bytes_to_send = my_client_.encodeRequestRegister(username_);
+        uint8_t *p_tx_buffer_start = &tx_buffer_[0];
+        uint8_t *p_rx_buffer_start = &rx_buffer_[0];
         my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
         // get response from server
         while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
 
-        if(!my_app->my_client_.handleRespRegister(my_app->id_)) {
-            my_app->console_.write("Error in response from server within registerUser function");
+        if(!my_client_.handleRespRegister(id_)) {
+            console_.write("ERR: unexpected server resp in taskRegisterUser");
+            return;
         }
 
-        cout << "Successfully received user ID: " << my_app->id_;
+        cout << "Successfully received user ID: " << id_;
     }
 
     Command getUserCommand() {
@@ -55,41 +60,71 @@ public:
         }
     }
 
-    void displayOnlineUsers() {
+    /**
+     * Gets online users from the server and populates local cache
+     */
+    void taskGetOnlineUsers() {
+        Socket my_socket;
+        my_socket.connectB(kServerIp, kServerPort); // connect to server
 
+        size_t num_bytes_to_send = my_client_.encodeRequestUsers(id_);
+        uint8_t *p_tx_buffer_start = &tx_buffer_[0];
+        uint8_t *p_rx_buffer_start = &rx_buffer_[0];
+        my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
+        // get response from server
+        while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
+
+        if(!my_client_.handleRespUsers(name_to_id_)) {
+            console_.write("ERR: unexpected server resp in taskGetOnlineUsers");
+            return;
+        }
+
+        console_.write("Online users: ");
+
+        if(name_to_id_.size() == 1) {
+            console_.write("No other users currently online");
+            return;
+        }
+
+        // print the names of all users
+        for(const auto& mapping : name_to_id_) {
+            if(mapping.second == id_) {
+                continue; // skip current user
+            }
+            console_.write(mapping.first); // write name of user
+            // @todo: also add code to print user ID for debugging purposes
+        }
     }
 
 
 
-    void chatWithUser() {
-        string target_user = "";
-        while(target_user == "") {
-            target_user = console_.read("Enter the name of the user you would like to chat with: ");
-            if(!name_to_id.contains(target_user)) {
-                console_.write("Error,  user not available");
-                target_user = "";
-            }
-        }
+    // void chatWithUser() {
+    //     string target_user = "";
+    //     while(target_user == "") {
+    //         target_user = console_.read("Enter the name of the user you would like to chat with: ");
+    //         if(!name_to_id.contains(target_user)) {
+    //             console_.write("Error,  user not available");
+    //             target_user = "";
+    //         }
+    //     }
 
 
-        while(true) {
-            string msg = console_.read("Enter message to send to " + target_user + "or X to exit> ");
-            if(msg[0] == 'X') {
-                return;
-            }
-            // TODO: send msg
-        }
-    }
+    //     while(true) {
+    //         string msg = console_.read("Enter message to send to " + target_user + "or X to exit> ");
+    //         if(msg[0] == 'X') {
+    //             return;
+    //         }
+    //         // TODO: send msg
+    //     }
+    // }
 
     void run() {
-        thread t1(registerUser, this);
-        t1.join();
-        
+        taskRegisterUser();
         while(true) {
             switch(getUserCommand()) {
                 case Command::kDisplayOnlineUsers:
-                    cout << "You selected kGetOnlineUsers" << endl;
-                break;
+                    taskGetOnlineUsers();
+                    break;
                 case Command::kChatWithUser:
                     cout << "You selected kChatWithUser" << endl;
                 break;
@@ -100,7 +135,7 @@ public:
     }
 private:
     Console &console_;
-    unordered_map<string, user_id_t> name_to_id; // maps username to id
+    unordered_map<string, user_id_t> name_to_id_; // maps username to id
     string username_; // name of user
     user_id_t id_; // id of current user 
 
