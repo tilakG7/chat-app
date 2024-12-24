@@ -19,12 +19,12 @@ public:
     MccServer(Database& db, vector<uint8_t> &tx_buffer) 
         : db_(db), tx_buffer_(tx_buffer) {}
 
-    /**
-     * For now, prints the response for verification
-     * TODO: actually send the response over the network
-     * @param num_bytes - number of bytes to send 
-     */
-    void sendResp(size_t num_bytes);
+    // /**
+    //  * For now, prints the response for verification
+    //  * TODO: actually send the response over the network
+    //  * @param num_bytes - number of bytes to send 
+    //  */
+    // void sendResp(size_t num_bytes);
 
     /**
      * Parses the register request

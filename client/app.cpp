@@ -1,22 +1,37 @@
 #include "app.h"
 #include "client.h"
+
 #include "console/console.h"
 #include "common/common.h"
+#include "tcp_lib/socket.h"
+
 #include <iostream>
+#include <thread>
 
 class App {
 public:
     App() : console_(Console::getInstance()) {
     }
 
-    void registerUser() {
+    static void registerUser(App *my_app) {
+        Socket my_socket;
+        my_socket.connectB("127.0.0.1", 8080);
+
         // get username
-        username_ = console_.read("Hi, there. Enter your name to start chatting >");
-        // TODO: send request to register user
-        my_client_.encodeRequestRegister(username_);
-        // actually send it
-        // get response
-        // handle response
+        my_app->username_ = my_app->console_.read("Hi, there. Enter your name to start chatting >");
+        // send request to register user
+        size_t num_bytes_to_send = my_app->my_client_.encodeRequestRegister(my_app->username_);
+        uint8_t *p_tx_buffer_start = &my_app->tx_buffer_[0];
+        uint8_t *p_rx_buffer_start = &my_app->rx_buffer_[0];
+        my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
+        // get response from server
+        while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
+
+        if(!my_app->my_client_.handleRespRegister(my_app->id_)) {
+            my_app->console_.write("Error in response from server within registerUser function");
+        }
+
+        cout << "Successfully received user ID: " << my_app->id_;
     }
 
     Command getUserCommand() {
@@ -67,7 +82,8 @@ public:
     }
 
     void run() {
-        registerUser();
+        thread t1(registerUser, this);
+        t1.join();
         
         while(true) {
             switch(getUserCommand()) {
@@ -86,9 +102,11 @@ private:
     Console &console_;
     unordered_map<string, user_id_t> name_to_id; // maps username to id
     string username_; // name of user
-    vector<uint8_t> tx_buffer_(1000U);
-    vector<uint8_t> rx_buffer_(1000U);
-    MccClient my_client_(tx_buffer_);
+    user_id_t id_; // id of current user 
+
+    vector<uint8_t> tx_buffer_ = vector<uint8_t>(1000);
+    vector<uint8_t> rx_buffer_ = vector<uint8_t>(1000);
+    MccClient my_client_{tx_buffer_, rx_buffer_};
 
 };
 
@@ -96,3 +114,5 @@ int main() {
     App app;
     app.run();
 }
+
+// c++ -std=c++20 app.cpp client.cpp ../console/console.cpp -I . -I ../ -o b && ./b

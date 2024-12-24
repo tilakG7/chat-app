@@ -12,7 +12,9 @@ using namespace std;
 
 class MccClient {
 public:
-    MccClient(vector<uint8_t> & tx_buffer) : tx_buffer_(tx_buffer) {}
+    MccClient(vector<uint8_t> & tx_buffer, vector<uint8_t> &rx_buffer) : 
+        tx_buffer_(tx_buffer), rx_buffer_(rx_buffer) {}
+        
     /**
      * Encodes a request to register a user
      * @param username - string representing the username to register
@@ -43,6 +45,22 @@ public:
      */
     size_t encodeRequestRecv(user_id_t id);
 
+    /**
+     * Handles the response to the register user request
+     * @param[out] id - holds the id of the newly registered user
+     * @returns true if the request was handled successfully
+     */
+    bool handleRespRegister(user_id_t &id);
+
 private:
+    /**
+     * Ensures that the packet received from the server matches the expected 
+     * packet type.
+     * @param[in] expected_type - packet type expected the raw data to contain
+     * @returns true if the inputted type matches raw data in rx buffer
+     */
+    bool validateRespHeader(const PacketType &expected_type);
+
     vector<uint8_t>& tx_buffer_; // ref. to buffer where encoded packets are stored
+    vector<uint8_t>& rx_buffer_; // ref. to buffer where raw data is received from server
 };

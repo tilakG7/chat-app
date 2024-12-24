@@ -78,7 +78,7 @@ public:
      * @param size  - number of bytes to send
      * @returns number of bytes sent, or -1 for error
      */
-    int sendNb(char *pData, size_t size) {
+    int sendNb(char *const pData, size_t size) {
         int res = send(fd_, pData, size, 0);
         if(res != -1) {
             return res;
@@ -95,7 +95,7 @@ public:
      * @param pData - pointer to data to send
      * @param count - number of bytes to send
     */
-    bool sendB(char *pData, size_t target_count) {
+    bool sendB(char *const pData, size_t target_count) {
         size_t curr_count = 0; // number of bytes that have been sent out
 
         while(curr_count < target_count) {
@@ -116,7 +116,7 @@ public:
     * @param data - pointer to buffer where data is to be stored
     * @param size - max num bytes which can be copied into buffer
     */
-    int receiveNb(char *pData, size_t size) {
+    int receiveNb(char * const pData, size_t size) {
         int res = ::recv(fd_, pData, size, 0);
         if(res != -1) {
             return res;
@@ -132,7 +132,7 @@ public:
      * @param pData - pointer memory where data will be stored
      * @param size - number of bytes to receive
      */
-    bool receiveB(char *pData, size_t target_count) {
+    bool receiveB(char *const pData, size_t target_count) {
         size_t curr_count = 0; // number of bytes that have already been received
 
         while(curr_count < target_count) {
