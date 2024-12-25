@@ -14,6 +14,12 @@ enum class PacketType : uint8_t {
     kRespRecv = 0xF3
 };
 
+enum class SendStatus : uint8_t {
+    kSuccess = 0,
+    kErrSrcId = 1,
+    kErrTrgtId = 2,
+};
+
 struct __attribute__((packed)) Header {
     PacketType type;
     length_t len;

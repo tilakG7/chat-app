@@ -132,6 +132,20 @@ bool MccClient::handleRespUsers(unordered_map<string, user_id_t>& name_to_id) {
     return true;
 }
 
+bool MccClient::handleRespSend(SendStatus &stat) {
+    if(!validateRespHeader(PacketType::kRespSend)) {
+        cerr << "ERR: Unexpected response type, expected kResSend" << endl;
+        return false;
+    }
+
+    // get the response value from the server
+    uint8_t *payload = &rx_buffer_[sizeof(Header)];
+    stat = static_cast<SendStatus>(*payload);
+    payload++;
+
+    return true;
+}
+
 // void handleRespSend(uint8_t *payload, length_t len) {
 //     cout << "Received kRespSend" << endl;
 //     cout << "Payload length: " << len << endl;

@@ -98,15 +98,54 @@ public:
 
 
 
-    // void chatWithUser() {
-    //     string target_user = "";
-    //     while(target_user == "") {
-    //         target_user = console_.read("Enter the name of the user you would like to chat with: ");
-    //         if(!name_to_id.contains(target_user)) {
-    //             console_.write("Error,  user not available");
-    //             target_user = "";
-    //         }
-    //     }
+    void taskChatWithUser() {
+        string target_user = "";
+        while(target_user == "") {
+            target_user = console_.read("Enter the name of the user you would like to chat with: ");
+            if(!name_to_id_.contains(target_user)) {
+                console_.write("Error,  user not available");
+                target_user = "";
+            } else {
+                break;
+            }
+        }
+
+        while(true) {
+            string msg = console_.read("Send message to " + target_user + ">" );
+            if(msg == "x") {
+                return; // exit chatting
+            }
+            Socket my_socket;
+            my_socket.connectB(kServerIp, kServerPort); // connect to server
+            size_t num_bytes_to_send = my_client_.encodeRequestSend(id_, name_to_id_[target_user], msg);
+            uint8_t *p_tx_buffer_start = &tx_buffer_[0];
+            uint8_t *p_rx_buffer_start = &rx_buffer_[0];
+            my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
+            // get response from server
+            while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
+            
+            SendStatus stat;
+            if(!my_client_.handleRespSend(stat)) {
+                console_.write("ERR: unexpected server resp in taskChatWithUser");
+                return;
+            }
+
+            switch(stat) {
+                case SendStatus::kSuccess:
+                    console_.write("Message succesfully sent");
+                break;
+                case SendStatus::kErrSrcId:
+                    console_.write("ERR: Source ID incorrect in send request");
+                break;
+                case SendStatus::kErrTrgtId:
+                    console_.write("ERR: Target ID incorrect in send request");
+                break;
+                default:
+                    console_.write("ERR: Received unexpected response value from server in Send request");
+                break;
+            }
+        }
+    }
 
 
     //     while(true) {
@@ -126,7 +165,7 @@ public:
                     taskGetOnlineUsers();
                     break;
                 case Command::kChatWithUser:
-                    cout << "You selected kChatWithUser" << endl;
+                    taskChatWithUser();
                 break;
                 default:
                 break;

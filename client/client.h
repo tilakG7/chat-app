@@ -48,7 +48,7 @@ public:
     /**
      * Handles the response to the register user request
      * @param[out] id - holds the id of the newly registered user
-     * @returns true if the request was handled successfully
+     * @returns true if the response was handled successfully
      */
     bool handleRespRegister(user_id_t &id);
 
@@ -56,9 +56,16 @@ public:
      * Handles the response to the online users request
      * @param[out] name_to_id - updated to hold a valid mapping of names to user 
      *  IDs if function returns true
-     * @returns true if the request was handled successfully
+     * @returns true if the response was handled successfully
      */
     bool handleRespUsers(unordered_map<string, user_id_t>& name_to_id);
+
+    /**
+     * Handles the response to the request to send data to a user
+     * @param[out] stat - holds the response value from the server
+     * @returns true if the response was successfully handled
+     */
+    bool handleRespSend(SendStatus &stat);
 
 private:
     /**
