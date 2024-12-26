@@ -67,6 +67,15 @@ public:
      */
     bool handleRespSend(SendStatus &stat);
 
+
+    /**
+     * Handles the response from the server regarding a reques to receive 
+     * messages
+     * @param[out] msgs - holds the messages received from the server
+     * @returns true if the response was successfully parsed
+     */
+    bool handleRespRecv(vector<Msg> &msgs);
+
 private:
     /**
      * Ensures that the packet received from the server matches the expected 

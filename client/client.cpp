@@ -146,23 +146,36 @@ bool MccClient::handleRespSend(SendStatus &stat) {
     return true;
 }
 
-// void handleRespSend(uint8_t *payload, length_t len) {
-//     cout << "Received kRespSend" << endl;
-//     cout << "Payload length: " << len << endl;
-//     uint8_t resp_val = *payload;
-//     assert(len == sizeof(resp_val) && 
-//             "Payload should only contain the response value");
+bool MccClient::handleRespRecv(vector<Msg> &msgs) {
+    if(!validateRespHeader(PacketType::kRespRecv)) {
+        cerr << "ERR: Unexpected response type, expected kRespRecv" << endl;
+        return false;
+    }
+
+    // get the response from the server
+    uint8_t *payload =  &rx_buffer_[sizeof(Header)];
     
-//     if(resp_val == 1) {
-//         cerr << "Invalid source ID provided" << endl;
-//     } else if(resp_val == 2) {
-//         cerr << "Invalid target ID provided" << endl;
-//     } else {
-//         cout << "Message sent successfully." << endl;
-//     }
+    uint8_t resp_val = *payload;
+    payload += sizeof(resp_val);
+    if(resp_val > 0) {
+        cerr << "ERR: server returned negative response in response receive" << endl;
+    }
 
-// }
+    uint32_t num_messages = *reinterpret_cast<uint32_t*>(payload);
+    payload += sizeof(num_messages);
 
+    for(length_t i=0; i < num_messages; i++) {
+        user_id_t id = *reinterpret_cast<user_id_t*>(payload);
+        payload += sizeof(user_id_t);
+        length_t msg_len = *reinterpret_cast<length_t*>(payload);
+        payload += sizeof(length_t);
+        string msg(reinterpret_cast<char*>(payload), msg_len);
+        payload += msg_len;
+
+        msgs.push_back({id, msg});
+    }
+    return true;
+}
 // void handleRespRecv(uint8_t *payload, length_t len) {
 
 //     cout << "Received kRespRecv" << endl;
@@ -174,25 +187,25 @@ bool MccClient::handleRespSend(SendStatus &stat) {
 //              << static_cast<int>(*(payload + i)) // Cast to int to avoid interpreting as char
 //              << std::endl;
 //     }
-//     uint8_t resp_val = *payload;
-//     if(resp_val > 0) {
-//         cout << "Error receiving response recevie." << endl;
-//     }
-//     payload += sizeof(resp_val);
-//     uint32_t num_messages = *reinterpret_cast<uint32_t*>(payload);
-//     payload += sizeof(num_messages);
+    // uint8_t resp_val = *payload;
+    // if(resp_val > 0) {
+    //     cout << "Error receiving response recevie." << endl;
+    // }
+    // payload += sizeof(resp_val);
+    // uint32_t num_messages = *reinterpret_cast<uint32_t*>(payload);
+    // payload += sizeof(num_messages);
 
-//     for(length_t i=0; i < num_messages; i++) {
-//         user_id_t id = *reinterpret_cast<user_id_t*>(payload);
-//         payload += sizeof(user_id_t);
-//         length_t msg_len = *reinterpret_cast<length_t*>(payload);
-//         payload += sizeof(length_t);
-//         string msg(reinterpret_cast<char*>(payload), msg_len);
-//         payload += msg_len;
+    // for(length_t i=0; i < num_messages; i++) {
+    //     user_id_t id = *reinterpret_cast<user_id_t*>(payload);
+    //     payload += sizeof(user_id_t);
+    //     length_t msg_len = *reinterpret_cast<length_t*>(payload);
+    //     payload += sizeof(length_t);
+    //     string msg(reinterpret_cast<char*>(payload), msg_len);
+    //     payload += msg_len;
 
-//         cout << "Received message: " << msg << endl;
-//         cout << "From user: " << Database::getInstance().getUsername(id) << endl;
-//     }
+    //     cout << "Received message: " << msg << endl;
+    //     cout << "From user: " << Database::getInstance().getUsername(id) << endl;
+    // }
 // }
 
 // void MccServer::sendResp(size_t num_bytes) {

@@ -17,18 +17,6 @@
 using namespace std;
 
 
-// Stores all message details to be forwarded to the recipient of the message
-struct Msg {
-    user_id_t sender_id;
-    string msg;
-};
-
-// Data persisted for each user
-struct UserMetadata {
-    string username;
-    vector<Msg> msg_q;
-};
-
 class Database {
 public:
     /**

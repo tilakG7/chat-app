@@ -1,5 +1,9 @@
 #pragma once
 #include <cstdint>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 using length_t = uint32_t;
 using user_id_t = uint32_t; // type to hold user IDs
@@ -23,6 +27,19 @@ enum class SendStatus : uint8_t {
 struct __attribute__((packed)) Header {
     PacketType type;
     length_t len;
+};
+
+
+// Stores all message details to be forwarded to the recipient of the message
+struct Msg {
+    user_id_t sender_id;
+    string msg;
+};
+
+// Data persisted for each user
+struct UserMetadata {
+    string username;
+    vector<Msg> msg_q;
 };
 
 constexpr length_t kReqUsersPayloadLen = sizeof(user_id_t);

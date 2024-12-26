@@ -8,6 +8,8 @@
 #include <iostream>
 #include <thread>
 
+using namespace std::chrono_literals;
+
 class App {
 public:
     App() : console_(Console::getInstance()) {
@@ -35,8 +37,6 @@ public:
             console_.write("ERR: unexpected server resp in taskRegisterUser");
             return;
         }
-
-        cout << "Successfully received user ID: " << id_;
     }
 
     Command getUserCommand() {
@@ -77,6 +77,11 @@ public:
         if(!my_client_.handleRespUsers(name_to_id_)) {
             console_.write("ERR: unexpected server resp in taskGetOnlineUsers");
             return;
+        }
+
+        id_to_name_.clear();
+        for(auto mapping : name_to_id_) {
+            id_to_name_.emplace(mapping.second, mapping.first);
         }
 
         console_.write("Online users: ");
@@ -147,18 +152,51 @@ public:
         }
     }
 
+    static void taskGetMessages(user_id_t my_id, App *p_my_app){ 
+        vector<uint8_t> rx_buffer(1000, 0);
+        vector<uint8_t> tx_buffer(1000, 0);
+        MccClient my_client{tx_buffer, rx_buffer};
 
-    //     while(true) {
-    //         string msg = console_.read("Enter message to send to " + target_user + "or X to exit> ");
-    //         if(msg[0] == 'X') {
-    //             return;
-    //         }
-    //         // TODO: send msg
-    //     }
-    // }
+        while(true) {
+            std::this_thread::sleep_for(1s);
+
+            Socket my_socket;
+            my_socket.connectB(kServerIp, kServerPort); // connect to server
+
+            size_t num_bytes_to_send = my_client.encodeRequestRecv(my_id);
+            uint8_t *p_tx_buffer_start = &tx_buffer[0];
+            uint8_t *p_rx_buffer_start = &rx_buffer[0];
+            my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
+            // get response from server
+            while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
+            
+            vector<Msg> msgs;
+            if(!my_client.handleRespRecv(msgs)) {
+                Console::getInstance().write("ERR: server response to receive message not handled");
+                return;
+            }
+
+
+            for(auto msg : msgs) {
+                string to_print = "";
+                if(p_my_app->id_to_name_.contains(msg.sender_id)) {
+                    to_print += p_my_app->id_to_name_[msg.sender_id];
+                    to_print += "> ";
+                } else {
+                    to_print += "Unknown sender > ";
+                }
+                to_print += msg.msg;
+                Console::getInstance().write(to_print);
+            }
+        }
+    }
+
+
 
     void run() {
         taskRegisterUser();
+        
+        thread t1(taskGetMessages, id_, this);
         while(true) {
             switch(getUserCommand()) {
                 case Command::kDisplayOnlineUsers:
@@ -171,10 +209,12 @@ public:
                 break;
             }
         }
+        t1.join();
     }
 private:
     Console &console_;
     unordered_map<string, user_id_t> name_to_id_; // maps username to id
+    unordered_map<user_id_t, string> id_to_name_; // maps id to username
     string username_; // name of user
     user_id_t id_; // id of current user 
 
@@ -189,4 +229,4 @@ int main() {
     app.run();
 }
 
-// c++ -std=c++20 app.cpp client.cpp ../console/console.cpp -I . -I ../ -o b && ./b
+// clear && c++ -std=c++20 app.cpp client.cpp ../console/console.cpp -I . -I ../ -o b && ./b
