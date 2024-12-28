@@ -1,6 +1,8 @@
 #include <mutex>
 #include <string>
 
+#pragma once
+
 using namespace std;
 
 /**

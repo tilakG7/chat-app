@@ -1,6 +1,7 @@
 /**
  * Class encodes data for transmission
  */
+# pragma once
 
 #include "common/common.h"
 

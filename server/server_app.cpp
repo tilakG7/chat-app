@@ -57,10 +57,10 @@ private:
 };
 
 
-int main() {
-    ServerApp my_server("127.0.0.1", 8080);
+int main(int argc, char *argv[]) {
+    ServerApp my_server(argv[1], stoi(argv[2]));
     my_server.run();
     return 0;
 
 }
-// c++ -std=c++20 server_app.cpp database.cpp server.cpp -I . -I ../ -o b && ./b
+// c++ -std=c++20 server_app.cpp database.cpp server.cpp -I . -I ../ -o b && ./b 127.0.0.1 8080      

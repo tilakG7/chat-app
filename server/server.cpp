@@ -204,6 +204,9 @@ size_t MccServer::parseRequestRecv(uint8_t *data, length_t payload_len) {
     resp_hdr.len = resp_pl;
     memcpy(&tx_buffer_[0], &resp_hdr, sizeof(resp_hdr));
 
+    // erase the messages from database
+    db_[id].msg_q.clear();
+
     return sizeof(Header) + resp_pl;
 }
 
