@@ -18,16 +18,17 @@ void App::registerUser() {
     // get username from user
     username_ = console_.read("Hi, there. Enter your name to start chatting >");
     // send request to register user
-    size_t num_bytes_to_send = my_client_.encodeRequestRegister(username_);
     vector<uint8_t> tx_buffer = vector<uint8_t>(1000);
     vector<uint8_t> rx_buffer = vector<uint8_t>(1000);
-    uint8_t *p_tx_buffer_start = &tx_buffer_[0];
-    uint8_t *p_rx_buffer_start = &rx_buffer_[0];
+    MccClient my_client(tx_buffer, rx_buffer);
+    size_t num_bytes_to_send = my_client.encodeRequestRegister(username_);
+    uint8_t *p_tx_buffer_start = &tx_buffer[0];
+    uint8_t *p_rx_buffer_start = &rx_buffer[0];
     my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
     // get response from server
     while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
 
-    if(!my_client_.handleRespRegister(id_)) {
+    if(!my_client.handleRespRegister(id_)) {
         console_.write("ERR: unexpected server resp in registerUser");
         return;
     }
@@ -60,6 +61,7 @@ void App::periodicGetOnlineUsers() {
     MccClient my_client{tx_buffer, rx_buffer};
 
     while(true) {
+        std::this_thread::sleep_for(1s);
         Socket my_socket;
         my_socket.connectB(kServerIp, kServerPort); // connect to server
 
@@ -70,7 +72,7 @@ void App::periodicGetOnlineUsers() {
         while(my_socket.receiveNb(reinterpret_cast<char*>(&rx_buffer[0]), 1000U) == 0U) {}
 
         unordered_map<string, user_id_t> new_name_to_id;
-        if(!my_client_.handleRespUsers(new_name_to_id)) {
+        if(!my_client.handleRespUsers(new_name_to_id)) {
             console_.write("ERR: unexpected server resp in taskGetOnlineUsers");
             return;
         }
@@ -79,8 +81,9 @@ void App::periodicGetOnlineUsers() {
             unique_lock<mutex> lck(name_mtx);
             // if the new mapping is the same as old, the status of online users has not
             // changed, thus, we don't need to do anything
+            // todo: make this comparison better
             if(new_name_to_id == name_to_id_) {
-                return;
+                continue;
             }
 
             name_to_id_ = new_name_to_id;
@@ -94,7 +97,7 @@ void App::periodicGetOnlineUsers() {
 
             if(!name_to_id_.size()) {
                 console_.write("No other users currently online");
-                return;
+                continue;
             }
 
             // print the names of all users
@@ -129,6 +132,11 @@ void App::taskChatWithUser() {
     string target_user = "";
     while(target_user == "") {
         target_user = console_.read("Enter the name of the user you would like to chat with: ");
+        // allow user to exit chatting with a user if they put x
+        // todo: ensure username is not x
+        if(target_user == "x") {
+            return;
+        }
         {
             unique_lock<mutex> lck(name_mtx);
             if(!name_to_id_.contains(target_user)) {
@@ -140,6 +148,9 @@ void App::taskChatWithUser() {
         }
     }
 
+    vector<uint8_t> tx_buffer(1000, 0);
+    vector<uint8_t> rx_buffer(1000, 0);
+    MccClient my_client(tx_buffer, rx_buffer);
     while(true) {
         string msg = console_.read("Send message to " + target_user + ">" );
         if(msg == "x") {
@@ -151,16 +162,16 @@ void App::taskChatWithUser() {
         size_t num_bytes_to_send;
         {
             unique_lock<mutex> lck(name_mtx);
-            num_bytes_to_send = my_client_.encodeRequestSend(id_, name_to_id_[target_user], msg);
+            num_bytes_to_send = my_client.encodeRequestSend(id_, name_to_id_[target_user], msg);
         }
-        uint8_t *p_tx_buffer_start = &tx_buffer_[0];
-        uint8_t *p_rx_buffer_start = &rx_buffer_[0];
+        uint8_t *p_tx_buffer_start = &tx_buffer[0];
+        uint8_t *p_rx_buffer_start = &rx_buffer[0];
         my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
         // get response from server
         while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
         
         SendStatus stat;
-        if(!my_client_.handleRespSend(stat)) {
+        if(!my_client.handleRespSend(stat)) {
             console_.write("ERR: unexpected server resp in taskChatWithUser");
             return;
         }

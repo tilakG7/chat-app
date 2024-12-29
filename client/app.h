@@ -79,8 +79,6 @@ private:
     string username_; // name of user
     user_id_t id_; // id of current user 
 
-    MccClient my_client_{tx_buffer_, rx_buffer_};
-
     const string kServerIp;
     const uint16_t kServerPort;
 };
