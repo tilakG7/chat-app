@@ -11,7 +11,7 @@
 using namespace std::chrono_literals;
 
 
-void App::taskRegisterUser() {
+void App::registerUser() {
     Socket my_socket;
     my_socket.connectB(kServerIp, kServerPort); // connect to server
 
@@ -19,6 +19,8 @@ void App::taskRegisterUser() {
     username_ = console_.read("Hi, there. Enter your name to start chatting >");
     // send request to register user
     size_t num_bytes_to_send = my_client_.encodeRequestRegister(username_);
+    vector<uint8_t> tx_buffer = vector<uint8_t>(1000);
+    vector<uint8_t> rx_buffer = vector<uint8_t>(1000);
     uint8_t *p_tx_buffer_start = &tx_buffer_[0];
     uint8_t *p_rx_buffer_start = &rx_buffer_[0];
     my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
@@ -26,7 +28,7 @@ void App::taskRegisterUser() {
     while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
 
     if(!my_client_.handleRespRegister(id_)) {
-        console_.write("ERR: unexpected server resp in taskRegisterUser");
+        console_.write("ERR: unexpected server resp in registerUser");
         return;
     }
 }
@@ -52,50 +54,72 @@ Command App::getUserCommand() {
     }
 }
 
-void App::taskGetOnlineUsers() {
-    Socket my_socket;
-    my_socket.connectB(kServerIp, kServerPort); // connect to server
+void App::periodicGetOnlineUsers() {
+    vector<uint8_t> rx_buffer(1000, 0);
+    vector<uint8_t> tx_buffer(1000, 0);
+    MccClient my_client{tx_buffer, rx_buffer};
 
-    size_t num_bytes_to_send = my_client_.encodeRequestUsers(id_);
-    uint8_t *p_tx_buffer_start = &tx_buffer_[0];
-    uint8_t *p_rx_buffer_start = &rx_buffer_[0];
-    my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
-    // get response from server
-    while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
+    while(true) {
+        Socket my_socket;
+        my_socket.connectB(kServerIp, kServerPort); // connect to server
 
-    unordered_map<string, user_id_t> new_name_to_id;
-    if(!my_client_.handleRespUsers(new_name_to_id)) {
-        console_.write("ERR: unexpected server resp in taskGetOnlineUsers");
-        return;
-    }
+        size_t num_bytes_to_send = my_client.encodeRequestUsers(id_);
+        
+        my_socket.sendB(reinterpret_cast<char*>(&tx_buffer[0]), num_bytes_to_send);
+        // get response from server
+        while(my_socket.receiveNb(reinterpret_cast<char*>(&rx_buffer[0]), 1000U) == 0U) {}
 
-    // if the new mapping is the same as old, the status of online users has not
-    // changed, thus, we don't need to do anything
-    if(new_name_to_id == name_to_id_) {
-        return;
-    }
-
-    name_to_id_ = new_name_to_id;
-    // copy contents to id_to_name_
-    id_to_name_.clear();
-    for(auto mapping : name_to_id_) {
-        id_to_name_.emplace(mapping.second, mapping.first);
-    }
-
-    console_.write("**********Updated Online users: ");
-
-    if(!name_to_id_.size()) {
-        console_.write("No other users currently online");
-        return;
-    }
-
-    // print the names of all users
-    for(const auto& mapping : name_to_id_) {
-        if(mapping.second == id_) {
-            continue; // skip current user
+        unordered_map<string, user_id_t> new_name_to_id;
+        if(!my_client_.handleRespUsers(new_name_to_id)) {
+            console_.write("ERR: unexpected server resp in taskGetOnlineUsers");
+            return;
         }
-        console_.write(mapping.first); // write name of user
-        // @todo: also add code to print user ID for debugging purposes
+
+        {
+            unique_lock<mutex> lck(name_mtx);
+            // if the new mapping is the same as old, the status of online users has not
+            // changed, thus, we don't need to do anything
+            if(new_name_to_id == name_to_id_) {
+                return;
+            }
+
+            name_to_id_ = new_name_to_id;
+            // copy contents to id_to_name_
+            id_to_name_.clear();
+            for(auto mapping : name_to_id_) {
+                id_to_name_.emplace(mapping.second, mapping.first);
+            }
+
+            console_.write("**********Updated Online users: ");
+
+            if(!name_to_id_.size()) {
+                console_.write("No other users currently online");
+                return;
+            }
+
+            // print the names of all users
+            for(const auto& mapping : name_to_id_) {
+                if(mapping.second == id_) {
+                    continue; // skip current user
+                }
+                console_.write(mapping.first); // write name of user
+                // @todo: also add code to print user ID for debugging purposes
+            }
+        }
+    }
+}
+
+void App::printOnlineUsers() {
+    {
+        unique_lock<mutex> lck(name_mtx);
+        // print the names of all users
+        for(const auto& mapping : name_to_id_) {
+            if(mapping.second == id_) {
+                continue; // skip current user
+            }
+            console_.write(mapping.first); // write name of user
+            // @todo: also add code to print user ID for debugging purposes
+        }
     }
 }
 
@@ -105,11 +129,14 @@ void App::taskChatWithUser() {
     string target_user = "";
     while(target_user == "") {
         target_user = console_.read("Enter the name of the user you would like to chat with: ");
-        if(!name_to_id_.contains(target_user)) {
-            console_.write("Error,  user not available");
-            target_user = "";
-        } else {
-            break;
+        {
+            unique_lock<mutex> lck(name_mtx);
+            if(!name_to_id_.contains(target_user)) {
+                console_.write("Error,  user not available");
+                target_user = "";
+            } else {
+                break;
+            }
         }
     }
 
@@ -120,7 +147,12 @@ void App::taskChatWithUser() {
         }
         Socket my_socket;
         my_socket.connectB(kServerIp, kServerPort); // connect to server
-        size_t num_bytes_to_send = my_client_.encodeRequestSend(id_, name_to_id_[target_user], msg);
+
+        size_t num_bytes_to_send;
+        {
+            unique_lock<mutex> lck(name_mtx);
+            num_bytes_to_send = my_client_.encodeRequestSend(id_, name_to_id_[target_user], msg);
+        }
         uint8_t *p_tx_buffer_start = &tx_buffer_[0];
         uint8_t *p_rx_buffer_start = &rx_buffer_[0];
         my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
@@ -150,7 +182,7 @@ void App::taskChatWithUser() {
     }
 }
 
-void App::taskGetMessages(user_id_t my_id, App *p_my_app){ 
+void App::periodicGetMessages(){ 
     vector<uint8_t> rx_buffer(1000, 0);
     vector<uint8_t> tx_buffer(1000, 0);
     MccClient my_client{tx_buffer, rx_buffer};
@@ -159,9 +191,9 @@ void App::taskGetMessages(user_id_t my_id, App *p_my_app){
         std::this_thread::sleep_for(1s);
 
         Socket my_socket;
-        my_socket.connectB(p_my_app->kServerIp, p_my_app->kServerPort); // connect to server
+        my_socket.connectB(kServerIp, kServerPort); // connect to server
 
-        size_t num_bytes_to_send = my_client.encodeRequestRecv(my_id);
+        size_t num_bytes_to_send = my_client.encodeRequestRecv(id_);
         uint8_t *p_tx_buffer_start = &tx_buffer[0];
         uint8_t *p_rx_buffer_start = &rx_buffer[0];
         my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
@@ -177,8 +209,8 @@ void App::taskGetMessages(user_id_t my_id, App *p_my_app){
 
         for(auto msg : msgs) {
             string to_print = "";
-            if(p_my_app->id_to_name_.contains(msg.sender_id)) {
-                to_print += p_my_app->id_to_name_[msg.sender_id];
+            if(id_to_name_.contains(msg.sender_id)) {
+                to_print += id_to_name_[msg.sender_id];
                 to_print += "> ";
             } else {
                 to_print += "Unknown sender > ";
@@ -190,16 +222,14 @@ void App::taskGetMessages(user_id_t my_id, App *p_my_app){
 }
 
 
-
 void App::run() {
-    taskRegisterUser();
-    thread t1(taskGetMessages, id_, this);
-    taskGetOnlineUsers();
-    thread t2(taskGetOnlineUsers, this);
+    registerUser();
+    thread t1(&App::periodicGetMessages, this);
+    thread t2(&App::periodicGetOnlineUsers, this);
     while(true) {
         switch(getUserCommand()) {
             case Command::kDisplayOnlineUsers:
-                taskGetOnlineUsers();
+                printOnlineUsers();
                 break;
             case Command::kChatWithUser:
                 taskChatWithUser();

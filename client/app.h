@@ -8,13 +8,13 @@
 
 #include <cstdint>
 #include <iostream>
+#include <mutex>
 #include <thread>
 
 enum class Command : uint8_t{
     kDisplayOnlineUsers,
     kChatWithUser,
 };
-
 
 using namespace std::chrono_literals;
 
@@ -34,18 +34,8 @@ public:
      * Prompts the user for their username and sends a request to register the 
      * user. In case of error, logs the error and exits
      */
-    void taskRegisterUser();
+    void registerUser();
 
-    /**
-     * Prompts the user to enter a command to determine next step
-     * @returns Command - the command the user chose
-     */
-    Command getUserCommand();
-
-    /**
-     * Gets online users from the server and populates local cache
-     */
-    void taskGetOnlineUsers();
 
 
     /**
@@ -57,7 +47,24 @@ public:
      * Periodically checks for new messages for current user by sending a 
      * request to the server
      */
-    static void taskGetMessages(user_id_t my_id, App *p_my_app);
+    void periodicGetMessages();
+
+    /**
+     * Periodically gets online users
+     */
+    void periodicGetOnlineUsers();
+
+    /**
+     * Prints the online users
+     */
+    void printOnlineUsers();
+
+    /**
+     * Prompts the user to enter a command to determine next step
+     * @returns Command - the command the user chose
+     */
+    Command getUserCommand();
+    
 
     /**
      * Run the overall app
@@ -66,13 +73,12 @@ public:
 
 private:
     Console &console_;
+    mutex name_mtx; // mutex guards concurrent access to name_to_id_ and id_to_name_
     unordered_map<string, user_id_t> name_to_id_; // maps username to id
     unordered_map<user_id_t, string> id_to_name_; // maps id to username
     string username_; // name of user
     user_id_t id_; // id of current user 
 
-    vector<uint8_t> tx_buffer_ = vector<uint8_t>(1000);
-    vector<uint8_t> rx_buffer_ = vector<uint8_t>(1000);
     MccClient my_client_{tx_buffer_, rx_buffer_};
 
     const string kServerIp;
