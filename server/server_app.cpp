@@ -34,6 +34,9 @@ public:
         // parse request and get size of response
         size_t num_bytes_tx = mcc.parse(&rx_buffer[0], num_bytes_rx);
 
+        cout << "Received packet type: " << rx_buffer[0] << endl;
+        cout << "Sending packet type: " << tx_buffer[0] << endl;
+
         // send response
         my_socket.sendB(reinterpret_cast<char*>(&tx_buffer[0]), num_bytes_tx);
     }
