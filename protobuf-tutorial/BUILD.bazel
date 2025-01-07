@@ -17,3 +17,11 @@ cc_binary(
         ":addressbook_cc_proto",
     ], 
 )
+
+cc_binary(
+    name = "read_message",
+    srcs = ["read_message.cpp"],
+    deps = [
+        ":addressbook_cc_proto",
+    ]
+)
