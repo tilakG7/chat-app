@@ -1,0 +1,37 @@
+cc_library(
+    name = "database",
+    srcs = [
+        "database.cpp",
+    ],
+    hdrs = [
+        "database.h",
+    ],
+    deps = [
+        "//common",
+    ],
+)
+
+cc_library(
+    name = "server",
+    srcs = [
+        "server.cpp",
+    ],
+    hdrs = [
+        "server.h",
+    ],
+    deps = [
+        ":database",
+        "//common",
+    ],
+)
+
+cc_binary(
+    name = "server_app",
+    srcs = ["server_app.cpp",],
+    deps = [
+        ":database",
+        ":server",
+        "//tcp_lib:server_socket",
+        "//tcp_lib:socket",
+    ],
+)

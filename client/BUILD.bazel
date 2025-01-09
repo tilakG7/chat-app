@@ -1,0 +1,19 @@
+cc_library(
+    name = "client",
+    srcs = ["client.cpp"],
+    hdrs = ["client.h"],
+    deps = [
+        "//common",
+    ]
+)
+
+cc_binary(
+    name = "app",
+    srcs = ["app.cpp", "app.h"],
+    deps = [
+        ":client",
+        "//console",
+        "//common",
+        "//tcp_lib:socket",
+    ],
+)

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip> // For std::hex, std::setw, and std::setfill
 #include <cstdint> // For uint8_t
+#include <cassert>
 
 using namespace std;
 

@@ -1,0 +1,32 @@
+cc_library(
+    name = "socket",
+    hdrs = [
+        "socket.h",
+    ],
+    visibility = [
+        "//client:__subpackages__",
+        "//server:__subpackages__",
+    ]
+)
+
+cc_library(
+    name = "tcp_util",
+    hdrs = [
+        "tcp_util.h",
+    ],
+)
+
+cc_library(
+    name = "server_socket",
+    hdrs = [
+        "server_socket.h",
+    ],
+    deps = [
+        ":socket",
+        ":tcp_util",
+    ],
+    visibility = [
+        "//server:__subpackages__",
+    ]
+)
+

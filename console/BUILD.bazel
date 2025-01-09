@@ -1,0 +1,8 @@
+cc_library(
+    name = "console",
+    srcs = ["console.cpp",],
+    hdrs = ["console.h",],
+    visibility = [
+        "//client:__subpackages__",
+    ]
+)
