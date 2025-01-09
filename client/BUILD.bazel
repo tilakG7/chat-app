@@ -7,6 +7,12 @@ cc_library(
     ]
 )
 
+cc_library(
+    name = "client_parser",
+    srcs = ["client_parser.cpp", "client_parser.h"],
+    deps = ["//common:packet_cc_proto",],
+)
+
 cc_binary(
     name = "app",
     srcs = ["app.cpp", "app.h"],

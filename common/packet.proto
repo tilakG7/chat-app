@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+message OnlineUser {
+    optional uint32 user_id = 1;
+    optional string username = 2;
+}
+
+message UserMessage {
+    optional uint32 user_id = 1;
+    optional string message = 2;
+}
+
+message RequestRegister {
+    optional string username = 1;
+}
+
+message RequestUsers {
+    optional uint32 requestor_id = 1;
+}
+
+message RequestSend {
+    optional uint32 source_id = 1;
+    optional uint32 target_id = 2;
+    optional string message = 3;
+
+}
+
+message RequestRecv {
+    optional uint32 requestor_id = 1;
+}
+
+message RespRegister {
+    optional uint32 resp_value = 1;
+    optional uint32 assigned_id = 2;
+}
+
+message RespUsers {
+    optional uint32 resp_value = 1;
+    repeated OnlineUser online_users = 2;
+}
+
+message RespSend {
+    optional uint32 resp_value = 1;
+}
+
+message RespRecv {
+    optional uint32 resp_value = 1;
+    repeated UserMessage messages = 2;
+}
