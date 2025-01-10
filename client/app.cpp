@@ -1,5 +1,6 @@
 #include "app.h"
 #include "client.h"
+#include "client_parser.h"
 
 #include "console/console.h"
 #include "common/common.h"
@@ -21,10 +22,11 @@ void App::registerUser() {
     vector<uint8_t> tx_buffer = vector<uint8_t>(1000);
     vector<uint8_t> rx_buffer = vector<uint8_t>(1000);
     MccClient my_client(tx_buffer, rx_buffer);
-    size_t num_bytes_to_send = my_client.encodeRequestRegister(username_);
-    uint8_t *p_tx_buffer_start = &tx_buffer[0];
+    // size_t num_bytes_to_send = my_client.encodeRequestRegister(username_);
+    string tx_str = ClientParser::encodeRequestRegister(username_);
+
     uint8_t *p_rx_buffer_start = &rx_buffer[0];
-    my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
+    my_socket.sendB(tx_str.data(), tx_str.size());
     // get response from server
     while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
 

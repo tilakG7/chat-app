@@ -6,25 +6,27 @@
 #pragma once
 
 #include "common/common.h"
-#include "common/packet.pb.h"
+
+#include <sstream>
+#include <string>
 
 using namespace std;
 
 class ClientParser {
 public:
-    ClientParser = default();
+    ClientParser() = default;
 
     /**
      * Encodes a request to register a user
      * @param username - string representing the username to register
      * @return # of bytes encoded
      */
-    size_t encodeRequestRegister(const string& username);
+    static string encodeRequestRegister(const string& username);
 
-    /**
-     * Handles the response to the register user request
-     * @param[out] id - holds the id of the newly registered user
-     * @returns true if the response was handled successfully
-     */
-    bool handleRespRegister(user_id_t &id);
+    // /**
+    //  * Handles the response to the register user request
+    //  * @param[out] id - holds the id of the newly registered user
+    //  * @returns true if the response was handled successfully
+    //  */
+    // bool handleRespRegister(user_id_t &id);
 };

@@ -5,6 +5,24 @@ message OnlineUser {
     optional string username = 2;
 }
 
+
+message Header{
+    enum PacketType {
+        PACKET_TYPE_REQUEST_REGISTER = 0;
+        PACKET_TYPE_REQUEST_USERS = 1;
+        PACKET_TYPE_REQUEST_SEND = 2;
+        PACKET_TYPE_REQUEST_RECV = 3;
+        PACKET_TYPE_RESP_REGISTER = 4;
+        PACKET_TYPE_RESP_USERS = 5;
+        PACKET_TYPE_RESP_SEND = 6;
+        PACKET_TYPE_RESP_RECV = 7;
+    }
+    
+    optional PacketType packet_type = 1;
+    optional uint32 payload_len = 2;
+    
+}
+
 message UserMessage {
     optional uint32 user_id = 1;
     optional string message = 2;
