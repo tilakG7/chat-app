@@ -71,7 +71,7 @@ public:
      * Returns true a user ID exists in the database
      */
     bool userExists(user_id_t id) const{
-        return user_map_.contains(id);
+        return user_map_.find(id) != user_map_.end();
     }
 
     user_id_t getNumUsers() const {
@@ -86,7 +86,10 @@ public:
      * Given a user ID, returns the corresponding username
      */
     string getUsername(user_id_t id) {
-        return user_map_.contains(id) ? user_map_[id].username : "";
+        if(user_map_.find(id) != user_map_.find(id)) {
+            return user_map_[id].username;
+        }
+        return "";
     }
 
 private:

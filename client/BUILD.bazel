@@ -18,6 +18,7 @@ cc_binary(
     srcs = ["app.cpp", "app.h"],
     deps = [
         ":client",
+        ":client_parser",
         "//console",
         "//common",
         "//tcp_lib:socket",

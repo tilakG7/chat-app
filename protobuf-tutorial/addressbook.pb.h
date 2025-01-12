@@ -3,12 +3,7 @@
 // source: addressbook.proto
 // Protobuf C++ Version: 5.29.2
 
-#ifndef addressbook_2eproto_2epb_2eh
-#define addressbook_2eproto_2epb_2eh
 
-#include <limits>
-#include <string>
-#include <type_traits>
 #include <utility>
 
 #include "google/protobuf/runtime_version.h"

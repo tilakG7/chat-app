@@ -64,19 +64,19 @@ public:
      * Get connection returns an active TCP/IP connection. 
      * The listening port will listen for connections and will connect to the 
      */
-    optional<int> getConnection() {
+    bool getConnection(int &res) {
         sockaddr_in address; // address of object we are trying to conenct to
         int addrlen = sizeof(address);
-        int res = accept(fd_, (struct sockaddr *)&address, (socklen_t*)&addrlen);
+        res = accept(fd_, (struct sockaddr *)&address, (socklen_t*)&addrlen);
 
         if(res == -1) {
             if((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-                return {};
+                return false;
             }
             perror("accept failed");
-            return {};
+            return false;
         }
-        return res;
+        return true;
     }
 
 

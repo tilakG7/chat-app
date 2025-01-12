@@ -49,7 +49,7 @@ Command App::getUserCommand() {
     while(true) {
         string user_cmd = console_.read("Enter your choice >");
 
-        if(user_cmd.size() == 0 || user_cmd.size() > 1 || !cmd_map.contains(user_cmd[0])) {
+        if(user_cmd.size() == 0 || user_cmd.size() > 1 || (cmd_map.find(user_cmd[0]) == cmd_map.end())) {
             console_.write("Invalid selection, try again");
         } else {
             return cmd_map[user_cmd[0]];
@@ -141,7 +141,7 @@ void App::taskChatWithUser() {
         }
         {
             unique_lock<mutex> lck(name_mtx);
-            if(!name_to_id_.contains(target_user)) {
+            if(name_to_id_.find(target_user) == name_to_id_.end()) {
                 console_.write("Error,  user not available");
                 target_user = "";
             } else {
@@ -222,7 +222,7 @@ void App::periodicGetMessages(){
 
         for(auto msg : msgs) {
             string to_print = "";
-            if(id_to_name_.contains(msg.sender_id)) {
+            if(id_to_name_.find(msg.sender_id) != id_to_name_.end()) {
                 to_print += id_to_name_[msg.sender_id];
                 to_print += "> ";
             } else {

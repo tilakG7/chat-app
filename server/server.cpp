@@ -1,3 +1,4 @@
+#include "common/packet.pb.h"
 #include "server.h"
 #include "database.h" // TODO: Remove, this is only needed for testing
 
@@ -12,6 +13,52 @@ size_t MccServer::parseRequestRegister(uint8_t *data, length_t payload_len) {
     // read username from request and register user
     string username(reinterpret_cast<char *>(data), payload_len);
     user_id_t id = db_.registerUser(username); // unique ID assigned to user
+    
+    // construct response
+    uint8_t *dest = tx_buffer_.data();
+    uint8_t resp_value = 0; // success, user registeration always returns valid user ID
+    const length_t payload_size =  sizeof(resp_value) + sizeof(user_id_t);
+    Header resp_hdr{PacketType::kRespRegister, payload_size};
+    
+    // copy header
+    memcpy(dest, &resp_hdr, sizeof(resp_hdr));
+    dest += sizeof(resp_hdr);
+    // copy response value
+    *dest = resp_value;
+    dest++;
+    // copy user ID
+    memcpy(dest, &id, sizeof(user_id_t));
+    dest += sizeof(user_id_t);
+
+    return sizeof(Header) + payload_size;
+}
+
+size_t MccServer::parseRequestRegisterProto(const string& rx_buffer) {
+    istringstream iss(rx_buffer);
+    trial::Header hdr;
+    if(!hdr.ParseFromIstream(&iss)) {
+        cout << "ERR parsing from istream #1" << endl;
+    }
+    if(hdr.packet_type() != trial::Header::PACKET_TYPE_REQUEST_REGISTER) {
+        cout << "ERR: packet type does not match intended." << endl;
+    }
+
+    trial::RequestRegister req;
+    if(!req.ParseFromIstream(&iss)) {
+        cout << "ERR parsing from istream #2" << endl;
+    }
+    if(!req.has_username()) {
+        cout << "ERR: NO USERNAME" << endl;
+    }
+    string username = req.username();
+    
+    cout << "username received; " << username << endl;
+
+    // read username from request and register user
+    // string username(reinterpret_cast<char *>(data), payload_len);
+    user_id_t id = db_.registerUser(username); // unique ID assigned to user
+
+
     
     // construct response
     uint8_t *dest = tx_buffer_.data();
@@ -213,8 +260,8 @@ size_t MccServer::parseRequestRecv(uint8_t *data, length_t payload_len) {
 
 size_t MccServer::parse(uint8_t *data, size_t size) {
     Header h = *reinterpret_cast<Header*>(data);
-    assert(size >= (sizeof(Header) + kMinPayloadLen) && "Invalid packet length");
-    assert(h.len == (size - sizeof(Header)) && "Invalid payload length");
+    // assert(size >= (sizeof(Header) + kMinPayloadLen) && "Invalid packet length");
+    // assert(h.len == (size - sizeof(Header)) && "Invalid payload length");
 
     switch(h.type) {
         case PacketType::kRequestRegister:
@@ -236,6 +283,8 @@ size_t MccServer::parse(uint8_t *data, size_t size) {
             cerr << "ERR: Server received packet type meant for client" << endl;
         default:
             cerr << "ERR: Server received unknown packet type "<< endl;
+            string rx_buffer(reinterpret_cast<char*>(data), size);
+            return parseRequestRegisterProto(rx_buffer);
 
     }
     return 0;

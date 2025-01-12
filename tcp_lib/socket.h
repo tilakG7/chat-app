@@ -16,7 +16,7 @@ using namespace std;
  */
 class Socket {
 public:
-    Socket(int fd  = -1, bool connected = false) : fd_(fd), connected_(connected) {
+    Socket(int fd  = -1, bool connected = false) : connected_(connected), fd_(fd) {
         if(connected_) {
             return;
         }
@@ -78,7 +78,7 @@ public:
      * @param size  - number of bytes to send
      * @returns number of bytes sent, or -1 for error
      */
-    int sendNb(char *const pData, size_t size) {
+    int sendNb(const char *const pData, size_t size) {
         int res = send(fd_, pData, size, 0);
         if(res != -1) {
             return res;
@@ -95,7 +95,7 @@ public:
      * @param pData - pointer to data to send
      * @param count - number of bytes to send
     */
-    bool sendB(char *const pData, size_t target_count) {
+    bool sendB(const char *const pData, size_t target_count) {
         size_t curr_count = 0; // number of bytes that have been sent out
 
         while(curr_count < target_count) {

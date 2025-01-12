@@ -48,9 +48,9 @@ public:
     void run() {
         ServerSocket my_server_socket(ip_, port_);
         while(true) {
-            optional<int> opt_socket_descriptor;
-            while(!(opt_socket_descriptor = my_server_socket.getConnection()).has_value()) {}
-            std::thread t(ServerApp::handleRequest, *opt_socket_descriptor);
+            int socket_descriptor = -1;
+            while(!my_server_socket.getConnection(socket_descriptor)) {}
+            std::thread t(ServerApp::handleRequest, socket_descriptor);
             t.detach();
         }
     }

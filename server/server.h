@@ -34,6 +34,8 @@ public:
      */
     size_t parseRequestRegister(uint8_t *data, length_t payload_len);
 
+    size_t parseRequestRegisterProto(const string& rx_buffer);
+
     /**
      * Parses the get online users request
      * @param data         - pointer to payload of request
