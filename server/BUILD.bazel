@@ -36,3 +36,13 @@ cc_binary(
         "//tcp_lib:socket",
     ],
 )
+
+cc_test(
+    name = "database_test",
+    srcs = ["tests/database_test.cpp"],
+    deps = [
+        ":database",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

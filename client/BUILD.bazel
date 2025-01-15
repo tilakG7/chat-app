@@ -24,3 +24,14 @@ cc_binary(
         "//tcp_lib:socket",
     ],
 )
+
+cc_test(
+    name = "client_parser_test",
+    srcs = ["tests/client_parser_test.cpp"],
+    deps = [
+        ":client_parser",
+        "//common:packet_cc_proto",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
