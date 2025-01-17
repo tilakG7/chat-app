@@ -10,12 +10,12 @@ using namespace std;
 // needs to write 
 string ClientParser::encodeRequestRegister(const string& username) {
     ostringstream oss;
-    trial::Header hdr;
-    hdr.set_packet_type(trial::Header::PACKET_TYPE_REQUEST_REGISTER);
+    mcc::Header hdr;
+    hdr.set_packet_type(mcc::Header::PACKET_TYPE_REQUEST_REGISTER);
     if(!hdr.SerializeToOstream(&oss)) {
         cerr << "Error parsing Header to ostream" << endl;
     }
-    trial::RequestRegister req;
+    mcc::RequestRegister req;
     req.set_username(username);
     cout << "Setting username: " << username << endl;
     if(!req.SerializeToOstream(&oss)) {

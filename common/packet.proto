@@ -1,10 +1,22 @@
 syntax = "proto3";
 
-package trial;
+package mcc;
 
 message OnlineUser {
     optional uint32 user_id = 1;
     optional string username = 2;
+}
+
+message Packet {
+    optional Header hdr = 1;
+    optional RequestRegister req_reg = 2;
+    optional RequestUsers req_users = 3;
+    optional RequestSend req_send = 4;
+    optional RequestRecv req_recv = 5;
+    optional RespRegister resp_reg = 6;
+    optional RespUsers resp_users = 7;
+    optional RespSend resp_send = 8;
+    optional RespRecv resp_recv = 9;
 }
 
 
@@ -20,9 +32,7 @@ message Header{
         PACKET_TYPE_RESP_RECV = 7;
     }
     
-    optional PacketType packet_type = 1;
-    optional uint32 payload_len = 2;
-    
+    optional PacketType packet_type = 1;    
 }
 
 message UserMessage {

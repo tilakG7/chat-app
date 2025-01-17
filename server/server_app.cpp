@@ -2,6 +2,7 @@
 #include <thread>
 #include <vector>
 
+#include "common/packet.pb.h"
 #include "database.h"
 #include "server.h" // for MCC layer parsing
 #include "tcp_lib/server_socket.h"
@@ -30,6 +31,30 @@ public:
         do {
             num_bytes_rx = my_socket.receiveNb(reinterpret_cast<char*>(&rx_buffer[0]), rx_buffer.size());
         } while(num_bytes_rx == 0);
+
+        mcc::Packet packet;
+        packet.ParseFromArray(rx_buffer.data(), 1024);
+
+        if(!packet.has_hdr() || !packet.hdr().has_packet_type()) {
+            cerr << "Received a request with an invalid header" << endl;
+        }
+
+        switch (packet.hdr().packet_type()){
+            case mcc::Header::PACKET_TYPE_REQUEST_RECV:
+            break;
+            case mcc::Header::PACKET_TYPE_REQUEST_REGISTER:
+            break;
+            case mcc::Header::PACKET_TYPE_REQUEST_SEND:
+            break;
+            case mcc::Header::PACKET_TYPE_REQUEST_USERS:
+            break;
+            default:
+                cerr << "Received an invalid packet type" << endl;
+        }
+        cout << packet.DebugString() << endl;
+        assert(packet.has_hdr() && "packet must have a header");
+        assert(packet.hdr().has_packet_type() && "header must have packet type");
+
         
         // parse request and get size of response
         size_t num_bytes_tx = mcc.parse(&rx_buffer[0], num_bytes_rx);

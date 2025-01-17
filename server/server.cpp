@@ -35,15 +35,15 @@ size_t MccServer::parseRequestRegister(uint8_t *data, length_t payload_len) {
 
 size_t MccServer::parseRequestRegisterProto(const string& rx_buffer) {
     istringstream iss(rx_buffer);
-    trial::Header hdr;
+    mcc::Header hdr;
     if(!hdr.ParseFromIstream(&iss)) {
         cout << "ERR parsing from istream #1" << endl;
     }
-    if(hdr.packet_type() != trial::Header::PACKET_TYPE_REQUEST_REGISTER) {
+    if(hdr.packet_type() != mcc::Header::PACKET_TYPE_REQUEST_REGISTER) {
         cout << "ERR: packet type does not match intended." << endl;
     }
 
-    trial::RequestRegister req;
+    mcc::RequestRegister req;
     if(!req.ParseFromIstream(&iss)) {
         cout << "ERR parsing from istream #2" << endl;
     }

@@ -30,6 +30,7 @@ cc_binary(
     name = "server_app",
     srcs = ["server_app.cpp",],
     deps = [
+        "//common:packet_cc_proto",
         ":database",
         ":server",
         "//tcp_lib:server_socket",

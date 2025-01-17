@@ -4,6 +4,7 @@
 
 #include "console/console.h"
 #include "common/common.h"
+#include "common/packet.pb.h"
 #include "tcp_lib/socket.h"
 
 #include <iostream>
@@ -18,21 +19,33 @@ void App::registerUser() {
 
     // get username from user
     username_ = console_.read("Hi, there. Enter your name to start chatting >");
+
+    mcc::Packet req_packet;
+    req_packet.mutable_hdr()->set_packet_type(mcc::Header::PACKET_TYPE_REQUEST_REGISTER);
+    req_packet.mutable_req_reg()->set_username(username_);
+
+    vector<char> tx_buffer(1000);
+    vector<uint8_t> rx_buffer(1000);
+
     // send request to register user
-    vector<uint8_t> tx_buffer = vector<uint8_t>(1000);
-    vector<uint8_t> rx_buffer = vector<uint8_t>(1000);
-    MccClient my_client(tx_buffer, rx_buffer);
-    // size_t num_bytes_to_send = my_client.encodeRequestRegister(username_);
-    string tx_str = ClientParser::encodeRequestRegister(username_);
+    !req_packet.SerializeToArray(tx_buffer.data(), tx_buffer.size());
+    my_socket.sendB(&tx_buffer[0], req_packet.ByteSizeLong());
 
-    uint8_t *p_rx_buffer_start = &rx_buffer[0];
-    my_socket.sendB(tx_str.data(), tx_str.size());
-    // get response from server
-    while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
+    // receive response from the user
+    while(my_socket.receiveNb(reinterpret_cast<char*>(&rx_buffer[0]), 1000U) == 0U) {}
 
-    if(!my_client.handleRespRegister(id_)) {
-        console_.write("ERR: unexpected server resp in registerUser");
-        return;
+    mcc::Packet resp_packet;
+    resp_packet.ParseFromArray(rx_buffer.data(), rx_buffer.size());
+
+    // ensure response is valid
+    if(!resp_packet.has_hdr()) {
+        cerr << "Error. Register user response is missing a header" << endl;
+    }
+    if(!resp_packet.has_resp_users()) {
+        cerr << "Error. Register user response is missing response message" << endl;
+    }
+    if(resp_packet.resp_users().resp_value() != 0) {
+        cerr << "Error. Server responded with a negative response for registering the user." << endl;
     }
 }
 
@@ -254,6 +267,7 @@ void App::run() {
     t1.join();
     t2.join();
 }
+
 int main() {
     string str_ip = Console::getInstance().read("Enter the server IP >");
     string str_port = Console::getInstance().read("Enter the server port >");
