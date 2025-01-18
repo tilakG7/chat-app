@@ -12,6 +12,24 @@
 class ServerApp {
 public:
     ServerApp(string ip, int port) : ip_(ip), port_(port){}
+
+    static size_t handleRequestRegister(const mcc::Packet &packet, char *tx_buffer, size_t capacity) {
+        if(!packet.has_req_reg() || !packet.req_reg().has_username()) {
+            cerr << "Invalid request register from client" << endl;
+            return;
+        }
+        
+        // unique ID assigned to user
+        user_id_t id = Database::getInstance().registerUser(packet.req_reg().username()); 
+
+        mcc::Packet resp_packet;
+        resp_packet.mutable_hdr()->set_packet_type(mcc::Header::PACKET_TYPE_RESP_REGISTER);
+        resp_packet.mutable_resp_reg()->set_resp_value(0);
+        resp_packet.mutable_resp_reg()->set_assigned_id(id);
+
+        resp_packet.SerializeToArray(tx_buffer, capacity);
+        return resp_packet.ByteSizeLong();
+    }
     
     /**
      * Receives raw bytes and gives it to the upper MCC layer to parse.
@@ -22,8 +40,9 @@ public:
      static void handleRequest(int socket_descriptor) {
         Socket my_socket(socket_descriptor, true);
 
+        vector<uint8_t> tx_buffer(1024);
         vector<uint8_t> rx_buffer(1024); // 1KB buffer to receive data from client
-        vector<uint8_t> tx_buffer(1024); // 1KB buffer to store response from MCC layer
+        
         MccServer mcc(Database::getInstance(), tx_buffer);
 
         // receive data
@@ -39,10 +58,12 @@ public:
             cerr << "Received a request with an invalid header" << endl;
         }
 
+        size_t num_bytes_tx = 0;
         switch (packet.hdr().packet_type()){
             case mcc::Header::PACKET_TYPE_REQUEST_RECV:
             break;
             case mcc::Header::PACKET_TYPE_REQUEST_REGISTER:
+                num_bytes_tx = handleRequestRegister(packet, tx_buffer.data(), tx_buffer.size());
             break;
             case mcc::Header::PACKET_TYPE_REQUEST_SEND:
             break;
@@ -52,15 +73,6 @@ public:
                 cerr << "Received an invalid packet type" << endl;
         }
         cout << packet.DebugString() << endl;
-        assert(packet.has_hdr() && "packet must have a header");
-        assert(packet.hdr().has_packet_type() && "header must have packet type");
-
-        
-        // parse request and get size of response
-        size_t num_bytes_tx = mcc.parse(&rx_buffer[0], num_bytes_rx);
-
-        cout << "Received packet type: " << rx_buffer[0] << endl;
-        cout << "Sending packet type: " << tx_buffer[0] << endl;
 
         // send response
         my_socket.sendB(reinterpret_cast<char*>(&tx_buffer[0]), num_bytes_tx);
