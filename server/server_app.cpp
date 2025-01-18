@@ -16,7 +16,7 @@ public:
     static size_t handleRequestRegister(const mcc::Packet &packet, char *tx_buffer, size_t capacity) {
         if(!packet.has_req_reg() || !packet.req_reg().has_username()) {
             cerr << "Invalid request register from client" << endl;
-            return;
+            return 0;
         }
         
         // unique ID assigned to user
@@ -40,15 +40,13 @@ public:
      static void handleRequest(int socket_descriptor) {
         Socket my_socket(socket_descriptor, true);
 
-        vector<uint8_t> tx_buffer(1024);
-        vector<uint8_t> rx_buffer(1024); // 1KB buffer to receive data from client
-        
-        MccServer mcc(Database::getInstance(), tx_buffer);
+        vector<char> tx_buffer(1024);
+        vector<char> rx_buffer(1024); // 1KB buffer to receive data from client
 
         // receive data
         size_t num_bytes_rx = 0;
         do {
-            num_bytes_rx = my_socket.receiveNb(reinterpret_cast<char*>(&rx_buffer[0]), rx_buffer.size());
+            num_bytes_rx = my_socket.receiveNb(&rx_buffer[0], rx_buffer.size());
         } while(num_bytes_rx == 0);
 
         mcc::Packet packet;
