@@ -41,10 +41,10 @@ void App::registerUser() {
     if(!resp_packet.has_hdr()) {
         cerr << "Error. Register user response is missing a header" << endl;
     }
-    if(!resp_packet.has_resp_users()) {
+    if(!resp_packet.has_resp_reg()) {
         cerr << "Error. Register user response is missing response message" << endl;
     }
-    if(resp_packet.resp_users().resp_value() != 0) {
+    if(resp_packet.resp_reg().resp_value() != 0) {
         cerr << "Error. Server responded with a negative response for registering the user." << endl;
     }
 }
@@ -73,13 +73,15 @@ Command App::getUserCommand() {
 void App::periodicGetOnlineUsers() {
     vector<uint8_t> rx_buffer(1000, 0);
     vector<uint8_t> tx_buffer(1000, 0);
-    MccClient my_client{tx_buffer, rx_buffer};
 
     while(true) {
         std::this_thread::sleep_for(1s);
         Socket my_socket;
         my_socket.connectB(kServerIp, kServerPort); // connect to server
 
+        mcc::Packet req_packet;
+        req_packet.mutable_hdr()->set_packet_type(mcc::Header::PACKET_TYPE_REQUEST_USERS);
+        req_packet.mutable_req_users()->set_requestor_id()
         size_t num_bytes_to_send = my_client.encodeRequestUsers(id_);
         
         my_socket.sendB(reinterpret_cast<char*>(&tx_buffer[0]), num_bytes_to_send);

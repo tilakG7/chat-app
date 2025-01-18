@@ -30,6 +30,34 @@ public:
         resp_packet.SerializeToArray(tx_buffer, capacity);
         return resp_packet.ByteSizeLong();
     }
+
+
+    static size_t handleRequestUsers(const mcc::Packet &packet, char *tx_buffer, size_t capacity) {
+        if(!packet.has_req_users() || !packet.req_users().has_requestor_id()) {
+            cerr << "Invalid request users from client" << endl;
+            return 0;
+        }
+
+        mcc::Packet resp_packet;
+        // return a negative response if the user does not exist in the database
+        if(!Database::getInstance().userExists(packet.req_users().requestor_id())) {
+            resp_packet.mutable_resp_users()->set_resp_value(1); // todo: replace magic number
+        } else {
+            resp_packet.mutable_resp_users()->set_resp_value(0); // todo: replace magic number
+            for(auto &it : Database::getInstance()) {
+                // current user should only know which OTHER users are online
+                if(it.first == packet.req_users().requestor_id()) {
+                    continue;
+                }
+
+                mcc::OnlineUser *online_user = resp_packet.mutable_resp_users()->add_online_users();
+                online_user->set_user_id(it.first);
+                online_user->set_username(it.second.username);
+            }
+        }
+        resp_packet.SerializeToArray(tx_buffer, capacity);
+        return resp_packet.ByteSizeLong();   
+    }
     
     /**
      * Receives raw bytes and gives it to the upper MCC layer to parse.
@@ -66,6 +94,7 @@ public:
             case mcc::Header::PACKET_TYPE_REQUEST_SEND:
             break;
             case mcc::Header::PACKET_TYPE_REQUEST_USERS:
+                num_bytes_tx = handleRequestUsers(packet, tx_buffer.data(), tx_buffer.size());
             break;
             default:
                 cerr << "Received an invalid packet type" << endl;
