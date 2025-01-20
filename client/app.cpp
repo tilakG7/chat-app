@@ -41,12 +41,14 @@ void App::registerUser() {
     if(!resp_packet.has_hdr()) {
         cerr << "Error. Register user response is missing a header" << endl;
     }
-    if(!resp_packet.has_resp_reg()) {
+    if(!resp_packet.has_resp_reg() || !resp_packet.resp_reg().has_resp_value()) {
         cerr << "Error. Register user response is missing response message" << endl;
     }
     if(resp_packet.resp_reg().resp_value() != 0) {
         cerr << "Error. Server responded with a negative response for registering the user." << endl;
     }
+    id_ = resp_packet.resp_reg().assigned_id();
+    console_.write("DEBUG: Server assigned user ID = " + to_string(id_));
 }
 
 Command App::getUserCommand() {
@@ -71,8 +73,8 @@ Command App::getUserCommand() {
 }
 
 void App::periodicGetOnlineUsers() {
-    vector<uint8_t> rx_buffer(1000, 0);
-    vector<uint8_t> tx_buffer(1000, 0);
+    vector<char> rx_buffer(1000, 0);
+    vector<char> tx_buffer(1000, 0);
 
     while(true) {
         std::this_thread::sleep_for(1s);
@@ -81,19 +83,28 @@ void App::periodicGetOnlineUsers() {
 
         mcc::Packet req_packet;
         req_packet.mutable_hdr()->set_packet_type(mcc::Header::PACKET_TYPE_REQUEST_USERS);
-        req_packet.mutable_req_users()->set_requestor_id()
-        size_t num_bytes_to_send = my_client.encodeRequestUsers(id_);
+        req_packet.mutable_req_users()->set_requestor_id(id_);
+        req_packet.SerializeToArray(tx_buffer.data(), tx_buffer.size());
+        size_t num_bytes_to_send = req_packet.ByteSizeLong();
         
-        my_socket.sendB(reinterpret_cast<char*>(&tx_buffer[0]), num_bytes_to_send);
+        my_socket.sendB(tx_buffer.data(), num_bytes_to_send);
         // get response from server
-        while(my_socket.receiveNb(reinterpret_cast<char*>(&rx_buffer[0]), 1000U) == 0U) {}
+        while(my_socket.receiveNb(rx_buffer.data(), 1000U) == 0U) {}
 
-        unordered_map<string, user_id_t> new_name_to_id;
-        if(!my_client.handleRespUsers(new_name_to_id)) {
-            console_.write("ERR: unexpected server resp in taskGetOnlineUsers");
-            return;
+        mcc::Packet resp_packet;
+        resp_packet.ParseFromArray(rx_buffer.data(), rx_buffer.size());
+
+        if(resp_packet.resp_users().resp_value() != 0) {
+            console_.write("DEBUG: ERR, negative response for get online users request");
+            continue;
         }
 
+        unordered_map<string, user_id_t> new_name_to_id;
+        for(size_t i=0; i < resp_packet.resp_users().online_users_size(); i++) {
+            const mcc::OnlineUser user = resp_packet.resp_users().online_users(i);
+            new_name_to_id[user.username()] = user.user_id();
+        }
+        
         {
             unique_lock<mutex> lck(name_mtx);
             // if the new mapping is the same as old, the status of online users has not
@@ -117,15 +128,8 @@ void App::periodicGetOnlineUsers() {
                 continue;
             }
 
-            // print the names of all users
-            for(const auto& mapping : name_to_id_) {
-                if(mapping.second == id_) {
-                    continue; // skip current user
-                }
-                console_.write(mapping.first); // write name of user
-                // @todo: also add code to print user ID for debugging purposes
-            }
         }
+        printOnlineUsers();
     }
 }
 
@@ -165,9 +169,9 @@ void App::taskChatWithUser() {
         }
     }
 
-    vector<uint8_t> tx_buffer(1000, 0);
-    vector<uint8_t> rx_buffer(1000, 0);
-    MccClient my_client(tx_buffer, rx_buffer);
+    vector<char> tx_buffer(1000, 0);
+    vector<char> rx_buffer(1000, 0);
+
     while(true) {
         string msg = console_.read("Send message to " + target_user + ">" );
         if(msg == "x") {
@@ -176,24 +180,29 @@ void App::taskChatWithUser() {
         Socket my_socket;
         my_socket.connectB(kServerIp, kServerPort); // connect to server
 
-        size_t num_bytes_to_send;
+
+        mcc::Packet req_packet;
+        req_packet.mutable_hdr()->set_packet_type(mcc::Header::PACKET_TYPE_REQUEST_SEND);
+        req_packet.mutable_req_send()->set_message(msg);
+        req_packet.mutable_req_send()->set_source_id(id_);
         {
             unique_lock<mutex> lck(name_mtx);
-            num_bytes_to_send = my_client.encodeRequestSend(id_, name_to_id_[target_user], msg);
+            req_packet.mutable_req_send()->set_target_id(name_to_id_[target_user]);
         }
-        uint8_t *p_tx_buffer_start = &tx_buffer[0];
-        uint8_t *p_rx_buffer_start = &rx_buffer[0];
-        my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
-        // get response from server
-        while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
+        req_packet.SerializeToArray(tx_buffer.data(), tx_buffer.size());
+        my_socket.sendB(tx_buffer.data(), req_packet.ByteSizeLong());
         
-        SendStatus stat;
-        if(!my_client.handleRespSend(stat)) {
-            console_.write("ERR: unexpected server resp in taskChatWithUser");
+        // get response from server
+        while(my_socket.receiveNb(rx_buffer.data(), rx_buffer.size()) == 0U) {}
+        
+        mcc::Packet resp_packet;
+        resp_packet.ParseFromArray(rx_buffer.data(), rx_buffer.size());
+        if(!resp_packet.resp_send().has_resp_value()) {
+            console_.write("ERR: unexpected server response for sending a message");
             return;
         }
 
-        switch(stat) {
+        switch(static_cast<SendStatus>(resp_packet.resp_send().resp_value())) {
             case SendStatus::kSuccess:
                 console_.write("Message succesfully sent");
             break;
@@ -211,9 +220,8 @@ void App::taskChatWithUser() {
 }
 
 void App::periodicGetMessages(){ 
-    vector<uint8_t> rx_buffer(1000, 0);
-    vector<uint8_t> tx_buffer(1000, 0);
-    MccClient my_client{tx_buffer, rx_buffer};
+    vector<char> rx_buffer(1000, 0);
+    vector<char> tx_buffer(1000, 0);
 
     while(true) {
         std::this_thread::sleep_for(1s);
@@ -221,29 +229,28 @@ void App::periodicGetMessages(){
         Socket my_socket;
         my_socket.connectB(kServerIp, kServerPort); // connect to server
 
-        size_t num_bytes_to_send = my_client.encodeRequestRecv(id_);
-        uint8_t *p_tx_buffer_start = &tx_buffer[0];
-        uint8_t *p_rx_buffer_start = &rx_buffer[0];
-        my_socket.sendB(reinterpret_cast<char*>(p_tx_buffer_start), num_bytes_to_send);
+        mcc::Packet req_packet;
+        req_packet.mutable_hdr()->set_packet_type(mcc::Header::PACKET_TYPE_REQUEST_RECV);
+        req_packet.mutable_req_recv()->set_requestor_id(id_);
+        req_packet.SerializeToArray(tx_buffer.data(), tx_buffer.size());
+        size_t num_bytes_to_send = req_packet.ByteSizeLong();
+        my_socket.sendB(tx_buffer.data(), num_bytes_to_send);
         // get response from server
-        while(my_socket.receiveNb(reinterpret_cast<char*>(p_rx_buffer_start), 1000U) == 0U) {}
+        while(my_socket.receiveNb(reinterpret_cast<char*>(rx_buffer.data()), 1000U) == 0U) {}
         
-        vector<Msg> msgs;
-        if(!my_client.handleRespRecv(msgs)) {
-            Console::getInstance().write("ERR: server response to receive message not handled");
-            return;
-        }
+        mcc::Packet resp_packet;
+        resp_packet.ParseFromArray(rx_buffer.data(), rx_buffer.size());
+        for(size_t i=0; i < resp_packet.resp_recv().messages_size(); i++) {
+            const mcc::UserMessage& msg = resp_packet.resp_recv().messages(i);
 
-
-        for(auto msg : msgs) {
             string to_print = "";
-            if(id_to_name_.find(msg.sender_id) != id_to_name_.end()) {
-                to_print += id_to_name_[msg.sender_id];
+            if(id_to_name_.find(msg.user_id()) != id_to_name_.end()) {
+                to_print += id_to_name_[msg.user_id()];
                 to_print += "> ";
             } else {
                 to_print += "Unknown sender > ";
             }
-            to_print += msg.msg;
+            to_print += msg.message();
             Console::getInstance().write(to_print);
         }
     }
@@ -271,8 +278,10 @@ void App::run() {
 }
 
 int main() {
-    string str_ip = Console::getInstance().read("Enter the server IP >");
-    string str_port = Console::getInstance().read("Enter the server port >");
+    // string str_ip = Console::getInstance().read("Enter the server IP >");
+    // string str_port = Console::getInstance().read("Enter the server port >");
+    string str_ip = "127.0.0.1";
+    string str_port = "8080";
 
     App app(str_ip, stoi(str_port));
     app.run();

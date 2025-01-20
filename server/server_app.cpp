@@ -39,6 +39,7 @@ public:
         }
 
         mcc::Packet resp_packet;
+        resp_packet.mutable_hdr()->set_packet_type(mcc::Header::PACKET_TYPE_RESP_USERS);
         // return a negative response if the user does not exist in the database
         if(!Database::getInstance().userExists(packet.req_users().requestor_id())) {
             resp_packet.mutable_resp_users()->set_resp_value(1); // todo: replace magic number
@@ -57,6 +58,32 @@ public:
         }
         resp_packet.SerializeToArray(tx_buffer, capacity);
         return resp_packet.ByteSizeLong();   
+    }
+
+    static size_t handleRequestRecv(const mcc::Packet &packet, char *tx_buffer, size_t capacity) {
+        if(!packet.has_req_recv() || !packet.req_recv().has_requestor_id()) {
+            cerr << "Invalid request to receive messages from client" << endl;
+            return 0;
+        }
+
+        mcc::Packet resp_packet;
+        resp_packet.mutable_hdr()->set_packet_type(mcc::Header::PACKET_TYPE_RESP_RECV);
+
+        // Return a negative response if user ID not in server storage
+        if(!Database::getInstance().userExists(packet.req_recv().requestor_id())) {
+            resp_packet.mutable_resp_recv()->set_resp_value(1); // todo: remove magic number
+        } else {
+            resp_packet.mutable_resp_recv()->set_resp_value(0); // todo: remove magic number
+            
+            for(Msg &m : Database::getInstance()[packet.req_recv().requestor_id()].msg_q) {
+                mcc::UserMessage *um = resp_packet.mutable_resp_recv()->add_messages();
+                um->set_user_id(m.sender_id);
+                um->set_message(m.msg);
+            }
+        }
+
+        resp_packet.SerializeToArray(tx_buffer, capacity);
+        return resp_packet.ByteSizeLong();
     }
     
     /**
